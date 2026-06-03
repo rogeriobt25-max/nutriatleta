@@ -2352,7 +2352,7 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
   <!-- ==================== STEP 6 — RESULT ==================== -->
   <div class="step" id="step-6">
 
-    <button class="btn-recalc" onclick="goStep(1)">← Refazer Cálculo</button>
+    <button class="btn-recalc" onclick="resetAndRecalc()">← Refazer Cálculo</button>
 
     <!-- Header -->
     <div class="result-header">
@@ -6319,6 +6319,28 @@ let _manualMacroTargets = { kcal: 0, prot: 0, carb: 0, fat: 0 };
 // Structure: { [mealKey]: { name, icon, time, foods: [{name, g, cal, p, c, f}] } }
 let _manualMeals = {};
 
+
+function resetAndRecalc() {
+  // Limpa estado do modo manual e variação
+  _selectedMenuMode = null;
+  _pendingResultParams = null;
+  _manualMeals = {};
+  useVariation = false;
+  selectedVariation = null;
+  selectedVarType = null;
+
+  // Restaura visibilidade das seções do resultado
+  const manualEl = document.getElementById('manualBuilderSection');
+  if (manualEl) manualEl.style.display = 'none';
+  const timelineEl = document.getElementById('mealTimeline');
+  if (timelineEl) timelineEl.style.display = '';
+  const mealsSectionEl = document.getElementById('mealsSection');
+  if (mealsSectionEl) mealsSectionEl.style.display = '';
+  const weekPlanEl = document.getElementById('weekPlanSection');
+  if (weekPlanEl) weekPlanEl.style.display = 'none';
+
+  goStep(1);
+}
 function showMenuModeModal(resultParams) {
   _pendingResultParams = resultParams;
   _selectedMenuMode = null;
