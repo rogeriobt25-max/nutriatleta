@@ -477,6 +477,17 @@ input[type=range]::-moz-range-thumb {
 .meal-kcal .kcal-label { font-size: 11px; color: var(--text3); }
 .meal-pct { font-size: 11px; color: var(--text2); margin-top: 2px; }
 
+/* SALAD SUGGESTION */
+.salad-suggestion {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px; padding: 8px 12px;
+  background: rgba(46,204,113,0.07); border: 1px dashed rgba(46,204,113,0.30);
+  border-radius: 10px; font-size: 12px; color: var(--text2); line-height: 1.4;
+}
+.salad-suggestion-icon { font-size: 16px; flex-shrink: 0; }
+.salad-suggestion-text { flex: 1; }
+.salad-suggestion-text strong { color: var(--green); font-weight: 600; }
+
 /* FOOD SUGGESTIONS */
 .food-section { margin-bottom: 20px; }
 .food-section-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
@@ -5578,6 +5589,20 @@ function rerenderMealInTimeline(mealIdx, params) {
   }
 }
 
+// ====================================================
+// SALAD SUGGESTIONS
+// ====================================================
+function getSaladSuggestion(mealName) {
+  const isAlmoco = mealName === 'Almoço';
+  const isJantar = mealName === 'Jantar' || mealName === 'Jantar/Ceia';
+  if (!isAlmoco && !isJantar) return '';
+  return `
+    <div class="salad-suggestion">
+      <div class="salad-suggestion-icon">🥗</div>
+      <div class="salad-suggestion-text">Inclua uma salada de sua preferência <span style="color:var(--text3)">(à vontade, não conta nos macros)</span></div>
+    </div>`;
+}
+
 function buildMealItemEl(m, mealIdx, context) {
   const div = document.createElement('div');
   div.className = 'meal-item';
@@ -5649,7 +5674,7 @@ function buildMealItemEl(m, mealIdx, context) {
     tableHTML = `
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px"><table class="meal-table">
         <thead><tr>
-          <th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>P(g)</th><th>C(g)</th><th>G(g)</th><th></th>
+          <th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th><th></th>
         </tr></thead>
         <tbody>
           ${m.foodItems.map((fi, foodIdx) => {
@@ -5692,6 +5717,7 @@ function buildMealItemEl(m, mealIdx, context) {
         <div class="meal-macro-badge fat">🥑 ${totF}g gord</div>
       </div>
       ${deficitAlertHTML}
+      ${getSaladSuggestion(m.name)}
     `;
   }
 
@@ -6244,7 +6270,7 @@ function renderMealCard(m, mealIdx) {
       <div class="meal-kcal"><div class="kcal-num">${m.calories}</div><div class="kcal-label">kcal</div></div>
     </div>
     <div style="overflow-x:auto"><table class="meal-table">
-      <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>P(g)</th><th>C(g)</th><th>G(g)</th><th></th></tr></thead>
+      <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th><th></th></tr></thead>
       <tbody>${m.foodItems.map((fi, foodIdx) => {
         const fdData = BR_FOODS[fi.name];
         const role = (fdData && fdData.role) || 'carb';
@@ -6854,7 +6880,7 @@ function finalizarCardapioManual() {
         <div class="meal-kcal"><div class="kcal-num">${totKcal}</div><div class="kcal-label">kcal</div></div>
       </div>
       <div style="overflow-x:auto"><table class="meal-table">
-        <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>P(g)</th><th>C(g)</th><th>G(g)</th></tr></thead>
+        <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th></tr></thead>
         <tbody>${meal.foods.map(fi => {
           const qtdDisplay = formatQtd(fi.name, fi.g);
           return `<tr>
@@ -6873,7 +6899,8 @@ function finalizarCardapioManual() {
         <div class="meal-macro-badge prot">💪 ${totP}g prot</div>
         <div class="meal-macro-badge carb">🌾 ${totC}g carb</div>
         <div class="meal-macro-badge fat">🥑 ${totF}g gord</div>
-      </div>`;
+      </div>
+      ${getSaladSuggestion(mDef.name)}`;
     timeline.appendChild(div);
   });
 
