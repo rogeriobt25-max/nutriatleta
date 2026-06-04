@@ -3237,6 +3237,82 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
     };
   });
 
+  // -------------------------------------------------------
+  // REGRAS DE EQUILÍBRIO ALMOÇO / JANTAR
+  // 1. Proteína principal (filé): dividir igual entre almoço e jantar
+  // 2. Arroz: jantar fica ~80% da porção do almoço
+  // 3. Feijão: máximo 2 conchas (160g) por refeição
+  // -------------------------------------------------------
+  const MAIN_PROT_FOODS = new Set(['Peito de frango grelhado','Carne bovina magra grelhada','Tilápia grelhada','Atum em lata','Salmão grelhado','Peru grelhado','Atum fresco cru']);
+  const RICE_FOODS      = new Set(['Arroz branco cozido','Arroz integral cozido','Arroz vermelho cozido']);
+  const FEIJAO_FOODS    = new Set(['Feijão cozido','Feijão preto cozido']);
+  const FEIJAO_MAX_G    = 160; // 2 conchas de 80g
+
+  const almocoIdx = rawMeals.findIndex(m => m.name === 'Almoço');
+  const jantarIdx = rawMeals.findIndex(m => m.name === 'Jantar' || m.name === 'Jantar/Ceia');
+
+  if (almocoIdx >= 0 && jantarIdx >= 0) {
+    const patchMeal = (meal, patcher) => ({ ...meal, foodItems: meal.foodItems.map(patcher) });
+    const recalCal  = items => items.reduce((s, fi) => s + fi.cal, 0);
+
+    // --- 1. Proteína igual entre almoço e jantar ---
+    const almocoProtItem = rawMeals[almocoIdx].foodItems.find(fi => MAIN_PROT_FOODS.has(fi.name));
+    const jantarProtItem = rawMeals[jantarIdx].foodItems.find(fi => MAIN_PROT_FOODS.has(fi.name));
+
+    if (almocoProtItem && jantarProtItem) {
+      const avgG = Math.round((almocoProtItem.g + jantarProtItem.g) / 2);
+      const clampG = g => Math.max(80, Math.min(250, g));
+      const targetG = clampG(avgG);
+
+      const patchProt = (name) => (fi) => {
+        if (fi.name !== name) return fi;
+        const ratio = targetG / fi.g;
+        return { ...fi, g: targetG, qtdLabel: formatQtd(fi.name, targetG),
+          cal: Math.round(fi.cal * ratio), p: Math.round(fi.p * ratio * 10) / 10,
+          c: Math.round(fi.c * ratio * 10) / 10, f: Math.round(fi.f * ratio * 10) / 10 };
+      };
+      rawMeals[almocoIdx] = patchMeal(rawMeals[almocoIdx], patchProt(almocoProtItem.name));
+      rawMeals[jantarIdx] = patchMeal(rawMeals[jantarIdx], patchProt(jantarProtItem.name));
+    }
+
+    // --- 2. Arroz: jantar = ~80% do almoço ---
+    const almocoRice = rawMeals[almocoIdx].foodItems.find(fi => RICE_FOODS.has(fi.name));
+    const jantarRice = rawMeals[jantarIdx].foodItems.find(fi => RICE_FOODS.has(fi.name));
+
+    if (almocoRice) {
+      // Arroz do almoço: limite escala com as calorias do plano
+      // até 2000 kcal → 270g | 2500 kcal → 300g | 3000+ kcal → 350g
+      const riceMaxG = target < 2200 ? 270 : target < 2800 ? 300 : 350;
+      const almocoRiceG = Math.min(almocoRice.g, riceMaxG);
+      const jantarRiceG = Math.round(almocoRiceG * 0.80);
+
+      const patchRice = (targetG, foodName) => (fi) => {
+        if (!RICE_FOODS.has(fi.name) || fi.name !== foodName) return fi;
+        const ratio = targetG / fi.g;
+        return { ...fi, g: targetG, qtdLabel: formatQtd(fi.name, targetG),
+          cal: Math.round(fi.cal * ratio), p: Math.round(fi.p * ratio * 10) / 10,
+          c: Math.round(fi.c * ratio * 10) / 10, f: Math.round(fi.f * ratio * 10) / 10 };
+      };
+      rawMeals[almocoIdx] = patchMeal(rawMeals[almocoIdx], patchRice(almocoRiceG, almocoRice.name));
+      if (jantarRice) rawMeals[jantarIdx] = patchMeal(rawMeals[jantarIdx], patchRice(jantarRiceG, jantarRice.name));
+    }
+
+    // --- 3. Feijão: máx 2 conchas (160g) ---
+    const patchFeijao = (fi) => {
+      if (!FEIJAO_FOODS.has(fi.name) || fi.g <= FEIJAO_MAX_G) return fi;
+      const ratio = FEIJAO_MAX_G / fi.g;
+      return { ...fi, g: FEIJAO_MAX_G, qtdLabel: formatQtd(fi.name, FEIJAO_MAX_G),
+        cal: Math.round(fi.cal * ratio), p: Math.round(fi.p * ratio * 10) / 10,
+        c: Math.round(fi.c * ratio * 10) / 10, f: Math.round(fi.f * ratio * 10) / 10 };
+    };
+    rawMeals[almocoIdx] = patchMeal(rawMeals[almocoIdx], patchFeijao);
+    rawMeals[jantarIdx] = patchMeal(rawMeals[jantarIdx], patchFeijao);
+
+    // Recalcular calorias das refeições modificadas
+    rawMeals[almocoIdx] = { ...rawMeals[almocoIdx], calories: recalCal(rawMeals[almocoIdx].foodItems) };
+    rawMeals[jantarIdx] = { ...rawMeals[jantarIdx], calories: recalCal(rawMeals[jantarIdx].foodItems) };
+  }
+
   // Validate & rebalance
   const validation = validateAndRebalanceMeals(rawMeals, protG, carbG, fatG);
   return validation;
@@ -3342,7 +3418,7 @@ const FOOD_MAX_G = {
   'Laranja':                      260,  // 2 unidades × 130g
   'Pão integral':                 180,  // 3 fatias × 60g (máx realista no café)
   'Pão francês':                  150,  // 3 unidades × 50g
-  'Feijão cozido':                200,  // ~2,5 conchas
+  'Feijão cozido':                160,  // máx 2 conchas
   'Peito de frango grelhado':     250,  // porção realista
   'Carne bovina magra grelhada':  200,  // 2 bifes médios
   'Tilápia grelhada':             240,  // 2 filés médios
@@ -3380,7 +3456,7 @@ const FOOD_MAX_G = {
   'Feijão preto cozido':          200,
   'Iogurte natural':              340,
   'Queijo minas padrão':          120,
-  'Ricota':                       160,
+  'Ricota':                        40, // máx 2 col sopa
   'Batata inglesa cozida':        390,
   'Inhame cozido':                360,
   'Macarrão integral cozido':     300,
@@ -3413,7 +3489,7 @@ const OVERFLOW_POOL_CARB_BREAKFAST = ['Aveia em flocos','Tapioca','Pão integral
 const OVERFLOW_POOL_CARB_MAIN      = ['Arroz branco cozido','Arroz integral cozido','Batata-doce cozida','Mandioca cozida','Feijão cozido','Aveia em flocos'];
 const OVERFLOW_POOL_PROT_BREAKFAST = ['Iogurte grego integral','Queijo cottage','Queijo minas frescal','Requeijão cremoso','Mussarela','Amendoim torrado','Pasta de amendoim'];
 const OVERFLOW_POOL_PROT_MAIN      = ['Peito de frango grelhado','Atum em lata','Tilápia grelhada','Carne bovina magra grelhada','Ovo cozido','Whey protein'];
-const OVERFLOW_POOL_FRUIT          = ['Banana','Mamão','Maçã','Manga','Laranja'];
+const OVERFLOW_POOL_FRUIT          = ['Banana','Mamão','Abacate','Manga','Laranja'];
 
 // ====================================================
 // ROTAÇÃO SEMANAL DE FRUTAS E CARBOIDRATOS
@@ -3425,12 +3501,12 @@ const OVERFLOW_POOL_FRUIT          = ['Banana','Mamão','Maçã','Manga','Laranj
 // Manga e Laranja não estão no BR_FOODS ainda — adicionadas abaixo
 const FRUIT_ROTATION = [
   'Banana',   // Seg
-  'Maçã',     // Ter
+  'Abacate',  // Ter  (role fat — tratado especialmente)
   'Mamão',    // Qua
-  'Manga',    // Qui
-  'Laranja',  // Sex
-  'Banana',   // Sáb  (banana 2x/7 = 28,5% < 40%)
-  'Maçã',     // Dom
+  'Banana',   // Qui  (2ª banana na semana)
+  'Abacate',  // Sex
+  'Mamão',    // Sáb
+  'Banana',   // Dom
 ];
 
 // Carboidratos base rotativos para refeições principais (almoço/jantar)
@@ -3439,9 +3515,20 @@ const CARB_ROTATION_MAIN = [
   'Batata-doce cozida',    // Ter
   'Arroz integral cozido', // Qua
   'Mandioca cozida',       // Qui
-  'Arroz branco cozido',   // Sex  (arroz 2x/7 = 28,5%)
+  'Arroz branco cozido',   // Sex
   'Batata-doce cozida',    // Sáb
   'Arroz integral cozido', // Dom
+];
+
+// Jantar sempre com arroz — pessoa troca manualmente se quiser
+const CARB_ROTATION_DINNER = [
+  'Arroz branco cozido',   // Seg
+  'Arroz integral cozido', // Ter
+  'Arroz branco cozido',   // Qua
+  'Arroz integral cozido', // Qui
+  'Arroz branco cozido',   // Sex
+  'Arroz integral cozido', // Sáb
+  'Arroz branco cozido',   // Dom
 ];
 
 // Carboidratos base rotativos para café da manhã / lanches
@@ -3505,20 +3592,23 @@ const PROTEIN_SUBS_VEGAN     = ['Lentilha cozida','Tofu','Grão-de-bico cozido']
 
 const MEAL_FOOD_TEMPLATES = {
   'Café da Manhã': [
-    { foods: ['Ovo mexido','Pão integral','Banana'],             roles:['prot','carb','fruit'], nonVegan:['Ovo mexido'] },
-    { foods: ['Ovo mexido','Tapioca','Mamão'],                   roles:['prot','carb','fruit'], nonVegan:['Ovo mexido'] },
-    { foods: ['Ovo mexido','Pão francês','Mamão'],               roles:['prot','carb','fruit'], nonVegan:['Ovo mexido'] },
-    { foods: ['Aveia em flocos','Iogurte grego integral','Banana'], roles:['carb','prot','fruit'], nonVegan:['Iogurte grego integral'] },
-    { foods: ['Tapioca','Queijo minas frescal','Banana'],        roles:['carb','prot','fruit'], nonVegan:['Queijo minas frescal'] },
-    { foods: ['Pão integral','Queijo cottage','Maçã'],           roles:['carb','prot','fruit'], nonVegan:['Queijo cottage'] },
-    { foods: ['Aveia em flocos','Banana','Amendoim torrado'],    roles:['carb','fruit','fat'],  vegan:true },
-    { foods: ['Tapioca','Banana','Pasta de amendoim'],           roles:['carb','fruit','fat'],  vegan:true },
+    // Abacate prioritário no café
+    { foods: ['Ovo mexido','Pão integral','Abacate'],               roles:['prot','carb','fat'],   nonVegan:['Ovo mexido'] },
+    { foods: ['Ovo mexido','Tapioca','Abacate'],                    roles:['prot','carb','fat'],   nonVegan:['Ovo mexido'] },
+    { foods: ['Aveia em flocos','Iogurte grego integral','Abacate'],roles:['carb','prot','fat'],   nonVegan:['Iogurte grego integral'] },
+    { foods: ['Ovo mexido','Pão francês','Banana'],                 roles:['prot','carb','fruit'], nonVegan:['Ovo mexido'] },
+    { foods: ['Tapioca','Queijo minas frescal','Banana'],           roles:['carb','prot','fruit'], nonVegan:['Queijo minas frescal'] },
+    { foods: ['Pão integral','Queijo cottage','Mamão'],             roles:['carb','prot','fruit'], nonVegan:['Queijo cottage'] },
+    { foods: ['Aveia em flocos','Banana','Amendoim torrado'],       roles:['carb','fruit','fat'],  vegan:true },
+    { foods: ['Tapioca','Abacate','Amendoim torrado'],              roles:['carb','fat','fat'],    vegan:true },
   ],
   'Lanche Manhã': [
-    { foods: ['Banana','Amendoim torrado'],                      roles:['fruit','fat'], vegan:true },
-    { foods: ['Iogurte grego integral','Banana'],                roles:['prot','fruit'], nonVegan:['Iogurte grego integral'] },
-    { foods: ['Castanha do Pará','Mamão'],                       roles:['fat','fruit'],  vegan:true },
-    { foods: ['Maçã','Pasta de amendoim'],                       roles:['fruit','fat'],  vegan:true },
+    // Banana e mamão prioritários, manga como última opção
+    { foods: ['Banana','Amendoim torrado'],                         roles:['fruit','fat'],  vegan:true },
+    { foods: ['Iogurte grego integral','Banana'],                   roles:['prot','fruit'], nonVegan:['Iogurte grego integral'] },
+    { foods: ['Mamão','Castanha do Pará'],                          roles:['fruit','fat'],  vegan:true },
+    { foods: ['Iogurte grego integral','Mamão'],                    roles:['prot','fruit'], nonVegan:['Iogurte grego integral'] },
+    { foods: ['Manga','Castanha do Pará'],                          roles:['fruit','fat'],  vegan:true },
   ],
   'Almoço': [
     { foods: ['Arroz branco cozido','Feijão cozido','Peito de frango grelhado','Azeite de oliva'], roles:['carb','carb','prot','fat'], nonVegan:['Peito de frango grelhado'] },
@@ -3528,29 +3618,30 @@ const MEAL_FOOD_TEMPLATES = {
     { foods: ['Arroz branco cozido','Feijão cozido','Lentilha cozida','Azeite de oliva'],          roles:['carb','carb','prot','fat'], vegan:true },
   ],
   'Lanche da Tarde': [
-    { foods: ['Banana','Aveia em flocos','Amendoim torrado'],    roles:['fruit','carb','fat'], vegan:true },
-    { foods: ['Iogurte grego integral','Banana'],                roles:['prot','fruit'], nonVegan:['Iogurte grego integral'] },
-    { foods: ['Batata-doce cozida','Queijo cottage'],            roles:['carb','prot'],  nonVegan:['Queijo cottage'] },
-    { foods: ['Maçã','Pasta de amendoim'],                       roles:['fruit','fat'],  vegan:true },
+    { foods: ['Banana','Aveia em flocos','Amendoim torrado'],       roles:['fruit','carb','fat'], vegan:true },
+    { foods: ['Iogurte grego integral','Banana'],                   roles:['prot','fruit'], nonVegan:['Iogurte grego integral'] },
+    { foods: ['Batata-doce cozida','Queijo cottage'],               roles:['carb','prot'],  nonVegan:['Queijo cottage'] },
+    { foods: ['Mamão','Pasta de amendoim'],                         roles:['fruit','fat'],  vegan:true },
   ],
   'Pré/Pós-Treino': [
-    { foods: ['Banana','Whey protein'],                            roles:['fruit','prot'], nonVegan:['Whey protein'] },
-    { foods: ['Banana','Aveia em flocos'],                       roles:['fruit','carb'], vegan:true },
-    { foods: ['Arroz branco cozido','Ovo cozido'],               roles:['carb','prot'],  nonVegan:['Ovo cozido'] },
+    { foods: ['Banana','Whey protein'],                             roles:['fruit','prot'], nonVegan:['Whey protein'] },
+    { foods: ['Banana','Aveia em flocos'],                          roles:['fruit','carb'], vegan:true },
+    { foods: ['Arroz branco cozido','Ovo cozido'],                  roles:['carb','prot'],  nonVegan:['Ovo cozido'] },
   ],
   'Pré-Treino': [
-    { foods: ['Banana','Aveia em flocos'],                       roles:['fruit','carb'], vegan:true },
-    { foods: ['Tapioca','Banana'],                               roles:['carb','fruit'], vegan:true },
-    { foods: ['Pão integral','Iogurte grego integral'],          roles:['carb','prot'],  nonVegan:['Iogurte grego integral'] },
+    // Sem fruta no pré-treino
+    { foods: ['Tapioca','Aveia em flocos'],                         roles:['carb','carb'], vegan:true },
+    { foods: ['Pão integral','Iogurte grego integral'],             roles:['carb','prot'], nonVegan:['Iogurte grego integral'] },
+    { foods: ['Arroz branco cozido','Ovo cozido'],                  roles:['carb','prot'], nonVegan:['Ovo cozido'] },
   ],
   'Pós-Treino': [
-    { foods: ['Banana','Whey protein'],                          roles:['fruit','prot'],       nonVegan:['Whey protein'] },
-    { foods: ['Banana','Pasta de amendoim'],                     roles:['fruit','fat'],         vegan:true },
-    { foods: ['Iogurte grego integral','Banana'],                roles:['prot','fruit'],       nonVegan:['Iogurte grego integral'] },
-    { foods: ['Tapioca','Ovo cozido'],                           roles:['carb','prot'],        nonVegan:['Ovo cozido'] },
-    { foods: ['Pão integral','Iogurte grego integral'],          roles:['carb','prot'],        nonVegan:['Iogurte grego integral'] },
-    { foods: ['Banana','Aveia em flocos'],                       roles:['fruit','carb'],       vegan:true },
-    { foods: ['Banana','Ovo cozido'],                            roles:['fruit','prot'],       nonVegan:['Ovo cozido'] },
+    // Banana prioritária no pós-treino
+    { foods: ['Banana','Whey protein'],                             roles:['fruit','prot'], nonVegan:['Whey protein'] },
+    { foods: ['Banana','Ovo cozido'],                               roles:['fruit','prot'], nonVegan:['Ovo cozido'] },
+    { foods: ['Banana','Aveia em flocos'],                          roles:['fruit','carb'], vegan:true },
+    { foods: ['Iogurte grego integral','Banana'],                   roles:['prot','fruit'], nonVegan:['Iogurte grego integral'] },
+    { foods: ['Tapioca','Ovo cozido'],                              roles:['carb','prot'],  nonVegan:['Ovo cozido'] },
+    { foods: ['Pão integral','Iogurte grego integral'],             roles:['carb','prot'],  nonVegan:['Iogurte grego integral'] },
   ],
   'Jantar': [
     { foods: ['Arroz branco cozido','Feijão cozido','Peito de frango grelhado','Azeite de oliva'], roles:['carb','carb','prot','fat'], nonVegan:['Peito de frango grelhado'] },
@@ -3725,8 +3816,17 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
   const isBreakfast = ['Café da Manhã','Lanche Manhã'].includes(mealName);
 
   // ---- Rotação semanal de frutas e carboidratos ----
-  if (dayIdx !== undefined && dayIdx !== null) {
-    const rotIdx = ((dayIdx % 7) + 7) % 7;
+  // Se dayIdx não fornecido, usar dia da semana atual para garantir rotação mesmo no plano diário
+  const effectiveDayIdx = (dayIdx !== undefined && dayIdx !== null) ? dayIdx : new Date().getDay();
+  {
+    // Offset por refeição: cada refeição pega uma fruta diferente no mesmo dia
+    const MEAL_FRUIT_OFFSET = {
+      'Café da Manhã': 0, 'Lanche Manhã': 1, 'Lanche da Tarde': 2,
+      'Pós-Treino': 1, 'Pré/Pós-Treino': 1, 'Pré-Treino': 0,
+      'Jantar': 0, 'Jantar/Ceia': 0,
+    };
+    const mealOffset = MEAL_FRUIT_OFFSET[mealName] ?? 0;
+    const rotIdx = ((effectiveDayIdx + mealOffset) % 7 + 7) % 7;
 
     // Se há preferências de fruta, criar rotação personalizada a partir delas
     const fruitPrefsValid = prefFruit.filter(f => BR_FOODS[f] && !isDisliked(f));
@@ -3745,7 +3845,7 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
     if (carbPrefs.length > 0) {
       dailyCarb = carbPrefs[rotIdx % carbPrefs.length];
     } else {
-      dailyCarb = isBreakfast ? CARB_ROTATION_BREAKFAST[rotIdx] : CARB_ROTATION_MAIN[rotIdx];
+      dailyCarb = isBreakfast ? CARB_ROTATION_BREAKFAST[rotIdx] : (['Almoço','Jantar','Jantar/Ceia'].includes(mealName) ? CARB_ROTATION_DINNER[rotIdx] : CARB_ROTATION_MAIN[rotIdx]);
     }
 
     const rotatedFoods = tmpl.foods.map((fname, i) => {
@@ -3753,7 +3853,11 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
       if (!fd) return fname;
       const role = (tmpl.roles || [])[i] || fd.role;
 
-      if (role === 'fruit' && dailyFruit && BR_FOODS[dailyFruit] && !isDisliked(dailyFruit)) {
+      // Abacate no café: troca com itens de role 'fat' E 'fruit' no template
+      if (dailyFruit === 'Abacate' && (role === 'fruit' || (role === 'fat' && isBreakfast))) {
+        return 'Abacate';
+      }
+      if (role === 'fruit' && dailyFruit && BR_FOODS[dailyFruit] && !isDisliked(dailyFruit) && dailyFruit !== 'Abacate') {
         return dailyFruit;
       }
       if (role === 'carb' && dailyCarb && BR_FOODS[dailyCarb] && !isDisliked(dailyCarb)) {
@@ -3788,79 +3892,6 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
       });
       tmpl = { ...tmpl, foods: finalFoods };
     }
-  } else {
-    // Sem rotação (plano fixo): aplicar preferências de proteína e carb diretamente
-    const protPrefsValid = prefProt.filter(f => BR_FOODS[f] && !isDisliked(f));
-    const carbPrefsValidFixed = prefCarb.filter(f => BR_FOODS[f] && BR_FOODS[f].role === 'carb' && !isDisliked(f));
-    // Leguminosas sempre fixas como base proteica/carb
-    const legumes = new Set(['Feijão cozido','Lentilha cozida','Grão-de-bico cozido']);
-    const isMainMeal = ['Almoço','Jantar','Jantar/Ceia'].includes(mealName);
-
-    let newFoods = [...tmpl.foods];
-    let newRoles = [...(tmpl.roles || tmpl.foods.map(f => BR_FOODS[f]?.role || 'carb'))];
-
-    // Se o usuário selecionou carbs E é refeição principal:
-    // montar prato só com o que foi selecionado + leguminosa + proteína + gordura
-    if (isMainMeal && carbPrefsValidFixed.length > 0) {
-      const protFood = (() => {
-        if (protPrefsValid.length > 0) {
-          const pick = pickPreferred(protPrefsValid, 'prot', new Set());
-          if (pick) return pick;
-        }
-        // fallback: manter proteína do template original
-        const idx = newRoles.findIndex(r => r === 'prot');
-        return idx >= 0 ? newFoods[idx] : 'Peito de frango grelhado';
-      })();
-      const fatFood = (() => {
-        const idx = newRoles.findIndex(r => r === 'fat');
-        return idx >= 0 ? newFoods[idx] : 'Azeite de oliva';
-      })();
-      // Leguminosa do template original (feijão, lentilha etc.)
-      const legumeFood = (() => {
-        const idx = newFoods.findIndex(f => legumes.has(f));
-        return idx >= 0 ? newFoods[idx] : 'Feijão cozido';
-      })();
-
-      // Filtrar carbs mutuamente exclusivos — grupos que não devem aparecer juntos
-      const exclusiveGroups = [
-        ['Arroz branco cozido','Arroz integral cozido'],   // tipos de arroz
-        ['Batata-doce cozida','Mandioca cozida'],           // tubérculos
-      ];
-      const filteredCarbs = carbPrefsValidFixed.reduce((acc, f) => {
-        for (const group of exclusiveGroups) {
-          if (group.includes(f) && acc.some(c => group.includes(c))) return acc;
-        }
-        acc.push(f);
-        return acc;
-      }, []);
-
-      // Montar: leguminosa + carbs filtrados + proteína + gordura
-      newFoods = [legumeFood, ...filteredCarbs, protFood, fatFood];
-      newRoles = ['carb', ...filteredCarbs.map(() => 'carb'), 'prot', 'fat'];
-
-    } else {
-      // Sem preferência de carb: usar template padrão, substituir/expandir proteína
-      if (protPrefsValid.length > 0) {
-        if (isBreakfast && protPrefsValid.length > 1) {
-          // Múltiplas proteínas no café: incluir todas
-          const nonProt = newFoods.filter((f,i) => newRoles[i] !== 'prot');
-          const nonProtRoles = nonProt.map(f => BR_FOODS[f]?.role || 'carb');
-          const allProts = protPrefsValid.filter(f => BR_FOODS[f]?.role === 'prot');
-          newFoods = [...allProts, ...nonProt];
-          newRoles = [...allProts.map(()=>'prot'), ...nonProtRoles];
-        } else {
-          newFoods = newFoods.map((fname, i) => {
-            if (newRoles[i] === 'prot') {
-              const pick = pickPreferred(protPrefsValid, 'prot', new Set());
-              if (pick) return pick;
-            }
-            return fname;
-          });
-        }
-      }
-    }
-
-    tmpl = { ...tmpl, foods: newFoods, roles: newRoles };
   }
 
   // ---- Separar alimentos do template por grupo de macro ----
@@ -4127,7 +4158,8 @@ function validateAndRebalanceMeals(meals, targetProt, targetCarb, targetFat) {
         // Calcular porção do complemento para cobrir até 70% do gap proteico
         // (o resto pode ser ajustado pelo scaleP) — evita exageros
         const targetGapProt = protGap * 0.70;
-        const portionG = Math.max(30, Math.min(150, Math.round((targetGapProt / cfd.p) * 100)));
+        const rawMaxG = complement === 'Ricota' ? 40 : 150;
+        const portionG = Math.max(30, Math.min(rawMaxG, Math.round((targetGapProt / cfd.p) * 100)));
         const ratio = portionG / 100;
         const newItem = {
           name: complement,
