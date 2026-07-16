@@ -54,7 +54,7 @@ body {
 .app { position: relative; z-index: 1; max-width: 860px; margin: 0 auto; padding: 20px 16px 60px; }
 
 /* HEADER */
-.header { text-align: center; padding: 48px 0 40px; }
+.header { text-align: center; padding: 48px 0 40px; position: relative; }
 .header-badge {
   display: inline-flex; align-items: center; gap: 8px;
   background: rgba(29,158,117,0.10); border: 1px solid rgba(29,158,117,0.22);
@@ -64,9 +64,12 @@ body {
 .header h1 {
   font-family: 'Bebas Neue', sans-serif;
   font-size: clamp(48px, 10vw, 80px);
-  letter-spacing: 3px; line-height: 0.95;
+  letter-spacing: 3px; line-height: 0.95; white-space: nowrap;
   background: linear-gradient(135deg, #2C2C2A 0%, #5F5E5A 40%, #1D9E75 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+@media(max-width:480px) {
+  .header h1 { font-size: clamp(30px, 9vw, 80px); letter-spacing: 1px; }
 }
 .header p { color: var(--text2); font-size: 16px; margin-top: 12px; max-width: 480px; margin-inline: auto; }
 
@@ -342,9 +345,12 @@ input[type=range]::-moz-range-thumb {
 .result-header { text-align: center; padding: 12px 0 36px; }
 .result-header h2 {
   font-family: 'Bebas Neue', sans-serif; font-size: clamp(36px, 8vw, 56px);
-  letter-spacing: 3px;
+  letter-spacing: 3px; white-space: nowrap;
   background: linear-gradient(135deg, #2C2C2A, #1D9E75);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+}
+@media(max-width:480px) {
+  .result-header h2 { font-size: clamp(20px, 6.5vw, 56px); letter-spacing: 1px; }
 }
 .result-header p { color: var(--text2); font-size: 14px; margin-top: 6px; }
 
@@ -550,8 +556,11 @@ input[type=range]::-moz-range-thumb {
 /* AUTH WIDGET (Firebase login)   */
 /* ============================== */
 .auth-widget {
-  position: fixed; top: 14px; right: 14px; z-index: 500;
+  position: absolute; top: 4px; right: 0; z-index: 20;
   font-family: 'DM Sans', sans-serif;
+}
+@media(max-width:560px) {
+  .auth-widget { position: static; display: flex; justify-content: center; margin-bottom: 16px; }
 }
 .auth-btn-google {
   display: flex; align-items: center; gap: 8px;
@@ -840,40 +849,6 @@ input[type=range]::-moz-range-thumb {
   font-size: 12px; color: var(--text2); margin-bottom: 6px; padding-left: 4px;
 }
 .elec-item::before { content: '⚡'; font-size: 11px; flex-shrink: 0; }
-
-/* HISTORY SECTION */
-.history-section {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px; margin-bottom: 20px;
-}
-.history-title {
-  font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px;
-  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
-  color: var(--text);
-}
-.history-list { display: flex; flex-direction: column; gap: 8px; }
-.history-item {
-  background: var(--bg3); border: 1px solid var(--border2);
-  border-radius: var(--radius2); padding: 12px 16px;
-  display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px;
-  cursor: pointer; transition: all 0.2s;
-}
-.history-item:hover { border-color: rgba(29,158,117,0.3); }
-.history-item-date { font-size: 11px; color: var(--text3); margin-bottom: 2px; }
-.history-item-info { font-size: 13px; color: var(--text); font-weight: 600; }
-.history-item-meta { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.history-item-kcal {
-  font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--accent);
-  text-align: right; white-space: nowrap;
-}
-.history-item-kcal span { font-size: 12px; color: var(--text3); display: block; }
-.btn-clear-history {
-  background: none; border: 1px solid rgba(239,68,68,0.3); color: #f87171;
-  border-radius: 8px; padding: 6px 12px; font-size: 12px; cursor: pointer;
-  font-family: 'DM Sans', sans-serif; transition: all 0.2s; margin-top: 12px;
-}
-.btn-clear-history:hover { background: rgba(239,68,68,0.1); }
-.history-empty { font-size: 13px; color: var(--text3); text-align: center; padding: 16px 0; }
 
 /* CALC DETAILS */
 .calc-details {
@@ -1343,16 +1318,6 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 .score-item-val { font-size: 12px; font-weight: 700; }
 
 
-/* HISTORY DIFF */
-.history-diff-badge {
-  display: inline-flex; align-items: center; gap: 3px;
-  font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 100px;
-  margin-left: 6px;
-}
-.history-diff-badge.up { background: rgba(29,158,117,0.12); color: var(--accent); }
-.history-diff-badge.down { background: rgba(179,58,30,0.10); color: var(--red); }
-.history-diff-badge.same { background: rgba(95,94,90,0.10); color: var(--text2); }
-
 /* ========================= */
 /* PREFERÊNCIAS ALIMENTARES */
 /* ========================= */
@@ -1765,22 +1730,6 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 <body>
 <div class="bg-pattern"></div>
 
-<!-- AUTH WIDGET (Firebase) -->
-<div class="auth-widget" id="authWidget">
-  <button class="auth-btn-google" id="authSignedOutBtn" onclick="fbSignIn()">
-    <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="">
-    Entrar com Google
-  </button>
-  <div class="auth-user-chip" id="authSignedInChip" style="display:none" onclick="toggleAuthDropdown(event)">
-    <span id="authAvatarWrap"></span>
-    <span class="auth-user-name" id="authUserName"></span>
-    <div class="auth-dropdown" id="authDropdown">
-      <button class="auth-dropdown-item" onclick="openMyPlansModal()">📂 Meus Planos</button>
-      <button class="auth-dropdown-item" onclick="fbSignOut()">🚪 Sair</button>
-    </div>
-  </div>
-</div>
-
 <!-- MEUS PLANOS MODAL -->
 <div class="variation-modal-overlay" id="myPlansModal" style="display:none" onclick="if(event.target===this) closeMyPlansModal()">
   <div class="variation-modal" style="max-width:480px" onclick="event.stopPropagation()">
@@ -1800,6 +1749,22 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 
   <!-- HEADER -->
   <div class="header">
+    <!-- AUTH WIDGET (Firebase) -->
+    <div class="auth-widget" id="authWidget">
+      <button class="auth-btn-google" id="authSignedOutBtn" onclick="fbSignIn()">
+        <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="">
+        Entrar com Google
+      </button>
+      <div class="auth-user-chip" id="authSignedInChip" style="display:none" onclick="toggleAuthDropdown(event)">
+        <span id="authAvatarWrap"></span>
+        <span class="auth-user-name" id="authUserName"></span>
+        <div class="auth-dropdown" id="authDropdown">
+          <button class="auth-dropdown-item" onclick="openMyPlansModal()">📂 Meus Planos</button>
+          <button class="auth-dropdown-item" onclick="fbSignOut()">🚪 Sair</button>
+        </div>
+      </div>
+    </div>
+
     <h1>NUTRI ATLETA</h1>
     <p>Plano nutricional personalizado para corredores e praticantes de musculação</p>
   </div>
@@ -2726,13 +2691,6 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
     </div>
 
 
-    <!-- History -->
-    <div class="history-section" id="historySection">
-      <div class="history-title">📋 Histórico de Planos</div>
-      <div class="history-list" id="historyList"></div>
-      <button class="btn-clear-history" onclick="clearHistory()" id="btnClearHistory" style="display:none">🗑️ Limpar Histórico</button>
-    </div>
-
     <!-- Calc Details -->
     <div class="calc-details">
       <div class="calc-details-title" id="calcDetailsToggle" onclick="toggleCalcDetails()">
@@ -2882,66 +2840,6 @@ function updateCheckUI(key) {
   const cb = document.getElementById('cb-'+key);
   if (el) el.classList.toggle('checked', state.checks[key]);
   if (cb) cb.textContent = state.checks[key] ? '✓' : '';
-}
-
-// ====================================================
-// LOCALSTORAGE HISTORY
-// ====================================================
-const HISTORY_KEY = 'nutriatleta_history';
-
-function saveToHistory(data) {
-  let history = [];
-  try { history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) {}
-  const entry = {
-    date: new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
-    ts: Date.now(),
-    weight: data.weight,
-    age: data.age,
-    goal: data.goal,
-    target: data.target,
-    protG: data.protG,
-    carbG: data.carbG,
-    fatG: data.fatG,
-    waterTotal: data.waterTotal,
-    sex: data.sex
-  };
-  history.unshift(entry);
-  if (history.length > 10) history = history.slice(0, 10);
-  try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history)); } catch(e) {}
-}
-
-function loadHistory() {
-  let history = [];
-  try { history = JSON.parse(localStorage.getItem(HISTORY_KEY)) || []; } catch(e) {}
-  return history;
-}
-
-function clearHistory() {
-  try { localStorage.removeItem(HISTORY_KEY); } catch(e) {}
-  renderHistory();
-}
-
-function renderHistory() {
-  const list = document.getElementById('historyList');
-  const btnClear = document.getElementById('btnClearHistory');
-  const history = loadHistory();
-  if (!history.length) {
-    list.innerHTML = '<div class="history-empty">Nenhum plano salvo ainda. Calcule seu plano para salvar automaticamente.</div>';
-    if (btnClear) btnClear.style.display = 'none';
-    return;
-  }
-  if (btnClear) btnClear.style.display = 'block';
-  const goalNames = { lose_fat:'Emagrecimento', maintain:'Manutenção', gain_muscle:'Hipertrofia', run_performance:'Performance', gain_and_run:'Massa+Corrida' };
-  list.innerHTML = history.map((h,i) => `
-    <div class="history-item">
-      <div>
-        <div class="history-item-date">${h.date}</div>
-        <div class="history-item-info">${h.sex==='male'?'♂':'♀'} ${h.age} anos · ${h.weight}kg · ${goalNames[h.goal]||h.goal}</div>
-        <div class="history-item-meta">P:${h.protG}g · C:${h.carbG}g · G:${h.fatG}g · 💧${(h.waterTotal/1000).toFixed(1)}L</div>
-      </div>
-      <div class="history-item-kcal">${h.target}<span>kcal/dia</span></div>
-    </div>
-  `).join('');
 }
 
 function toggleCalcDetails() {
@@ -3404,11 +3302,6 @@ function calculate() {
   resultParams.meals = mealValidation2.meals;
   resultParams.mealValidation = mealValidation2;
   resultParams._baseMacros = { target, protG, carbG, fatG };
-
-  saveToHistory({
-    weight, age, goal: state.goal, target: Math.round(target),
-    protG, carbG, fatG, waterTotal: waterTotalFinal, sex: state.sex
-  });
 
   // Sempre mostrar modal de escolha de modo (auto ou manual)
   // Se já tem preferências, perguntar também (o usuário pode querer manual)
@@ -4921,9 +4814,6 @@ function renderResult(r) {
   const nl = document.getElementById('notesList');
   nl.innerHTML = notes.map(n => `<div class="notes-item">${n}</div>`).join('');
 
-  // History
-  renderHistory();
-
   // Calc Details
   renderCalcDetails({
     bmr, tdee, target, adjust, protG, protKcal, carbG, carbKcal, fatG, fatKcal,
@@ -4943,9 +4833,6 @@ function renderResult(r) {
 
   // Shopping List (uses today's meals as base × 7)
   buildShoppingList(meals);
-
-  // History Diff
-  renderHistoryDiff(target, protG, carbG, fatG);
 }
 
 // ====================================================
@@ -5217,17 +5104,6 @@ function confirmVariationNew() {
   }
 
   renderResult(pendingCalcParams);
-  saveToHistory({
-    weight: pendingCalcParams.weight,
-    age: pendingCalcParams.age,
-    goal: state.goal,
-    target: Math.round(pendingCalcParams.target),
-    protG: pendingCalcParams.protG,
-    carbG: pendingCalcParams.carbG,
-    fatG: pendingCalcParams.fatG,
-    waterTotal: pendingCalcParams.waterTotal,
-    sex: state.sex
-  });
   goStep(6);
 }
 
@@ -6594,39 +6470,6 @@ function renderMealCard(m, mealIdx) {
 }
 
 // ====================================================
-// HISTORY DIFF
-// ====================================================
-function getLastHistoryEntry() {
-  const h = loadHistory();
-  return h.length > 1 ? h[1] : null; // h[0] is current
-}
-
-function renderHistoryDiff(currentTarget, currentProtG, currentCarbG, currentFatG) {
-  const last = getLastHistoryEntry();
-  if (!last) return;
-  const diffTarget = Math.round(currentTarget) - last.target;
-  const diffProt = currentProtG - last.protG;
-  const diffCarb = currentCarbG - last.carbG;
-  const diffFat = currentFatG - last.fatG;
-
-  function badge(val, unit) {
-    if (val === 0) return `<span class="history-diff-badge same">= ${unit}</span>`;
-    const cls = val > 0 ? 'up' : 'down';
-    const sign = val > 0 ? '↑' : '↓';
-    return `<span class="history-diff-badge ${cls}">${sign}${Math.abs(val)}${unit}</span>`;
-  }
-
-  const container = document.getElementById('resTargetKcal');
-  const existing = container.parentElement.querySelector('.diff-row');
-  if (existing) existing.remove();
-  const div = document.createElement('div');
-  div.className = 'diff-row';
-  div.style.cssText = 'font-size:12px;color:var(--text2);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px;align-items:center';
-  div.innerHTML = `vs. plano anterior: ${badge(diffTarget, 'kcal')} ${badge(diffProt, 'g prot')} ${badge(diffCarb, 'g carb')} ${badge(diffFat, 'g gord')}`;
-  container.parentElement.appendChild(div);
-}
-
-// ====================================================
 // MENU MODE — ESCOLHA AUTO OU MANUAL
 // ====================================================
 let _pendingResultParams = null;
@@ -7321,7 +7164,6 @@ function addFoodFromModal(foodName) {
 // ====================================================
 updateProgress();
 setMeals(4);
-renderHistory();
 </script>
 
 <!-- ============================================================ -->
