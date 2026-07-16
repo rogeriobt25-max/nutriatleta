@@ -83,6 +83,15 @@ body {
 @media(max-width:480px) {
   .header h1 { font-size: clamp(30px, 9vw, 80px); letter-spacing: 1px; }
 }
+.btn-install-app {
+  margin-top: 16px;
+  background: var(--accent); color: #fff; border: none;
+  padding: 10px 22px; border-radius: 999px; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 4px 14px rgba(29,158,117,0.25);
+}
+.btn-install-app:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(29,158,117,0.32); }
 .header p { color: var(--text2); font-size: 16px; margin-top: 12px; max-width: 480px; margin-inline: auto; }
 
 /* PROGRESS BAR */
@@ -1779,6 +1788,7 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 
     <h1>NUTRI ATLETA</h1>
     <p>Plano nutricional personalizado para corredores e praticantes de musculação</p>
+    <button class="btn-install-app" id="btnInstallApp" style="display:none" onclick="triggerInstallPrompt()">📲 Instalar App</button>
   </div>
 
   <!-- PROGRESS -->
@@ -7185,6 +7195,49 @@ if ('serviceWorker' in navigator && location.protocol === 'https:') {
     });
   });
 }
+
+// ====================================================
+// BOTÃO PERSONALIZADO "INSTALAR APP"
+// ====================================================
+let _deferredInstallPrompt = null;
+
+function isAppInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+
+function hideInstallBtn() {
+  const btn = document.getElementById('btnInstallApp');
+  if (btn) btn.style.display = 'none';
+}
+
+// O navegador dispara esse evento só quando o app ainda NÃO está instalado
+// e cumpre os requisitos (manifest + ícones + service worker).
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _deferredInstallPrompt = e;
+  if (!isAppInstalled()) {
+    const btn = document.getElementById('btnInstallApp');
+    if (btn) btn.style.display = 'inline-flex';
+  }
+});
+
+window.triggerInstallPrompt = async function () {
+  if (!_deferredInstallPrompt) return;
+  _deferredInstallPrompt.prompt();
+  await _deferredInstallPrompt.userChoice;
+  _deferredInstallPrompt = null;
+  hideInstallBtn(); // some o botão independente da escolha, pra não ficar insistindo
+};
+
+// Some assim que o app é efetivamente instalado
+window.addEventListener('appinstalled', () => {
+  _deferredInstallPrompt = null;
+  hideInstallBtn();
+});
+
+// Se já estiver rodando instalado (aberto como app), nem mostra o botão
+if (isAppInstalled()) hideInstallBtn();
+
 </script>
 
 <!-- ============================================================ -->
