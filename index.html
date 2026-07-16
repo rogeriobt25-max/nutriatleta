@@ -151,6 +151,9 @@ body {
   font-size: 11px; color: var(--text3); font-weight: 400;
   text-transform: none; letter-spacing: 0;
 }
+.field label.pref-tag-label {
+  display: block; min-height: 32px; line-height: 1.5;
+}
 .field input, .field select {
   background: var(--bg3); border: 1px solid var(--border2);
   border-radius: var(--radius2); color: var(--text);
@@ -621,6 +624,45 @@ input[type=range]::-moz-range-thumb {
   background: rgba(29,158,117,0.10); border-color: #1D9E75;
   color: #1D9E75; box-shadow: 0 0 16px rgba(29,158,117,0.12);
 }
+
+/* DAY PICKER (1..7) — substitui o slider de "dias por semana" */
+.day-picker { display: flex; gap: 6px; flex-wrap: wrap; }
+.day-btn {
+  width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border2);
+  background: var(--bg3); color: var(--text2); font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.day-btn:hover { border-color: rgba(29,158,117,0.4); color: var(--accent); }
+.day-btn.selected {
+  background: rgba(29,158,117,0.10); border-color: #1D9E75;
+  color: #1D9E75; box-shadow: 0 0 12px rgba(29,158,117,0.15);
+}
+
+/* DURATION STEPPER — caixinha pré-definida com +/- e toggle min/horas */
+.duration-stepper { display: flex; align-items: center; justify-content: flex-start; gap: 14px; }
+.dur-stepper-btn {
+  width: 36px; height: 36px; border-radius: 8px; border: 1px solid var(--border2);
+  background: var(--bg3); color: var(--text); font-size: 18px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; transition: all 0.15s; line-height: 1;
+}
+.dur-stepper-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.dur-display-box {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  min-width: 70px;
+}
+.dur-value {
+  font-family: 'Bebas Neue', sans-serif; font-size: 24px; color: var(--text); line-height: 1;
+}
+.dur-unit-toggle { display: flex; gap: 3px; background: var(--bg); border-radius: 7px; padding: 2px; }
+.dur-unit-btn {
+  padding: 3px 9px; border-radius: 5px; border: none; background: transparent;
+  color: var(--text3); font-size: 11px; font-weight: 700; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; transition: all 0.15s;
+}
+.dur-unit-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.10); }
+.dur-unit-btn:hover:not(.active) { color: var(--text2); }
 
 /* MEAL TABLE */
 .meal-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
@@ -1705,11 +1747,11 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 
       <div class="form-grid">
         <div class="field">
-          <label>% Gordura Corporal <span class="opt">(opcional — melhora a precisão)</span></label>
+          <label class="pref-tag-label">% Gordura Corporal <span class="opt">(opcional — melhora a precisão)</span></label>
           <input type="number" id="bodyfat" placeholder="Ex: 18" min="3" max="60" step="0.5">
         </div>
         <div class="field">
-          <label>Peso Desejado <span class="opt">(opcional — kg)</span></label>
+          <label class="pref-tag-label">Peso Desejado <span class="opt">(opcional — kg)</span></label>
           <input type="number" id="desiredWeight" placeholder="Ex: 70" min="30" max="250" step="0.1">
         </div>
       </div>
@@ -1811,14 +1853,33 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
                 <label>Dias por semana</label>
                 <div class="range-value" id="liftDaysVal">3 dias</div>
               </div>
-              <input type="range" id="liftDays" min="1" max="7" value="3" oninput="updateRange('liftDays','liftDaysVal',' dias')">
+              <div class="day-picker" id="liftDaysPicker">
+                <button type="button" class="day-btn" onclick="setDaysCount('lift',1)">1</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('lift',2)">2</button>
+                <button type="button" class="day-btn selected" onclick="setDaysCount('lift',3)">3</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('lift',4)">4</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('lift',5)">5</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('lift',6)">6</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('lift',7)">7</button>
+              </div>
+              <input type="hidden" id="liftDays" value="3">
             </div>
             <div class="range-field">
               <div class="range-header">
                 <label>Duração por treino</label>
-                <div class="range-value" id="liftTimeVal">60 min</div>
               </div>
-              <input type="range" id="liftTime" min="20" max="120" value="60" step="10" oninput="updateRange('liftTime','liftTimeVal',' min')">
+              <div class="duration-stepper">
+                <button type="button" class="dur-stepper-btn" onclick="stepDuration('lift',-1)">−</button>
+                <div class="dur-display-box">
+                  <span class="dur-value" id="liftTimeVal">60 min</span>
+                  <div class="dur-unit-toggle">
+                    <button type="button" class="dur-unit-btn active" id="liftTimeUnitBtn-min" onclick="setDurationUnit('lift','min')">min</button>
+                    <button type="button" class="dur-unit-btn" id="liftTimeUnitBtn-hour" onclick="setDurationUnit('lift','hour')">horas</button>
+                  </div>
+                </div>
+                <button type="button" class="dur-stepper-btn" onclick="stepDuration('lift',1)">+</button>
+              </div>
+              <input type="hidden" id="liftTime" value="60">
             </div>
           </div>
           <div class="form-grid" style="margin-top:16px">
@@ -1844,7 +1905,16 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
                 <label>Dias por semana</label>
                 <div class="range-value" id="runDaysVal">3 dias</div>
               </div>
-              <input type="range" id="runDays" min="1" max="7" value="3" oninput="updateRange('runDays','runDaysVal',' dias')">
+              <div class="day-picker" id="runDaysPicker">
+                <button type="button" class="day-btn" onclick="setDaysCount('run',1)">1</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('run',2)">2</button>
+                <button type="button" class="day-btn selected" onclick="setDaysCount('run',3)">3</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('run',4)">4</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('run',5)">5</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('run',6)">6</button>
+                <button type="button" class="day-btn" onclick="setDaysCount('run',7)">7</button>
+              </div>
+              <input type="hidden" id="runDays" value="3">
             </div>
             <div class="range-field">
               <div class="range-header">
@@ -1856,11 +1926,11 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
           </div>
           <div class="form-grid">
             <div class="field">
-              <label>Pace médio <span class="opt">(opcional — ex: 5:30)</span></label>
+              <label class="pref-tag-label">Pace médio <span class="opt">(opcional — ex: 5:30)</span></label>
               <input type="text" id="runPace" placeholder="min:seg por km">
             </div>
             <div class="field">
-              <label>Longão semanal <span class="opt">(opcional — km)</span></label>
+              <label class="pref-tag-label">Longão semanal <span class="opt">(opcional — km)</span></label>
               <input type="number" id="runLong" placeholder="Ex: 18" min="5" max="60">
             </div>
           </div>
@@ -1961,13 +2031,13 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 
       <div class="form-grid" style="margin-bottom:24px">
         <div class="field">
-          <label>Alimentos que NÃO gosta <span class="opt">(pressione Enter para adicionar)</span></label>
+          <label class="pref-tag-label">Alimentos que NÃO gosta <span class="opt">(pressione Enter para adicionar)</span></label>
           <div class="tags-input-wrap" id="dislikedWrap" onclick="document.getElementById('dislikedInput').focus()">
             <input type="text" class="tags-input" id="dislikedInput" placeholder="Ex: brócolis..." onkeydown="addTag('disliked',event)">
           </div>
         </div>
         <div class="field">
-          <label>Alimentos que DESEJA incluir <span class="opt">(pressione Enter para adicionar)</span></label>
+          <label class="pref-tag-label">Alimentos que DESEJA incluir <span class="opt">(pressione Enter para adicionar)</span></label>
           <div class="tags-input-wrap" id="desiredWrap" onclick="document.getElementById('desiredInput').focus()">
             <input type="text" class="tags-input" id="desiredInput" placeholder="Ex: aveia..." onkeydown="addTag('desired',event)">
           </div>
@@ -2415,35 +2485,6 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
     <!-- Plan Score -->
     <div class="plan-score-card" id="planScoreCard"></div>
 
-    <!-- Workout Timing -->
-    <div class="workout-timing-card" id="workoutTimingCard" style="display:none"></div>
-
-    <!-- Charts -->
-    <div class="chart-row">
-      <div class="chart-card">
-        <div class="chart-title">📊 Distribuição de Macros</div>
-        <div class="donut-wrap">
-          <svg id="donutChart" width="140" height="140" viewBox="0 0 140 140"></svg>
-          <div class="donut-legend" id="donutLegend"></div>
-        </div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">💧 Hidratação Diária</div>
-        <div id="waterChartArea"></div>
-      </div>
-    </div>
-
-    <!-- Water -->
-    <div class="water-card" id="waterCard">
-      <div class="water-title"><span style="font-size:28px">💧</span><h3>META DIÁRIA DE ÁGUA</h3></div>
-      <div class="water-big" id="waterTotal">0<span>litros</span></div>
-      <div class="water-breakdown" id="waterBreakdown"></div>
-      <div class="water-glass-row" id="waterGlasses"></div>
-      <div id="electAlert" style="display:none">
-        <div class="elec-alert">⚡ <strong>Eletrólitos recomendados:</strong> com este volume de corrida, considere sódio, potássio e magnésio especialmente nos dias de treino longo.</div>
-      </div>
-    </div>
-
     <!-- Weekly Plan Section -->
     <div class="week-plan-section" id="weekPlanSection" style="display:none">
       <div class="week-plan-title">🗓️ Cardápio da Semana
@@ -2517,6 +2558,35 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
         <button class="mb-finalize-btn" id="mbFinalizeBtn" onclick="finalizarCardapioManual()">
           ✅ Finalizar e Ver Resumo do Plano
         </button>
+      </div>
+    </div>
+
+    <!-- Workout Timing -->
+    <div class="workout-timing-card" id="workoutTimingCard" style="display:none"></div>
+
+    <!-- Charts -->
+    <div class="chart-row">
+      <div class="chart-card">
+        <div class="chart-title">📊 Distribuição de Macros</div>
+        <div class="donut-wrap">
+          <svg id="donutChart" width="140" height="140" viewBox="0 0 140 140"></svg>
+          <div class="donut-legend" id="donutLegend"></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">💧 Hidratação Diária</div>
+        <div id="waterChartArea"></div>
+      </div>
+    </div>
+
+    <!-- Water -->
+    <div class="water-card" id="waterCard">
+      <div class="water-title"><span style="font-size:28px">💧</span><h3>META DIÁRIA DE ÁGUA</h3></div>
+      <div class="water-big" id="waterTotal">0<span>litros</span></div>
+      <div class="water-breakdown" id="waterBreakdown"></div>
+      <div class="water-glass-row" id="waterGlasses"></div>
+      <div id="electAlert" style="display:none">
+        <div class="elec-alert">⚡ <strong>Eletrólitos recomendados:</strong> com este volume de corrida, considere sódio, potássio e magnésio especialmente nos dias de treino longo.</div>
       </div>
     </div>
 
@@ -2842,7 +2912,17 @@ function goStep(n) {
   document.getElementById('step-'+n).classList.add('active');
   currentStep = n;
   updateProgress();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  scrollToCurrentStep();
+}
+
+// Rola até a seção do passo atual (barra de progresso + card),
+// em vez de pular para o topo absoluto da página (acima do título/hero).
+function scrollToCurrentStep() {
+  const target = document.getElementById('progressWrap') || document.getElementById('step-'+currentStep);
+  if (!target) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+  const topOffset = 16; // pequena margem para não colar no topo
+  const y = target.getBoundingClientRect().top + window.pageYOffset - topOffset;
+  window.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
 }
 
 function updateProgress() {
@@ -2969,6 +3049,56 @@ function setRace(dist) {
 
 function updateRange(inputId, valId, suffix) {
   document.getElementById(valId).textContent = document.getElementById(inputId).value + suffix;
+}
+
+// ====================================================
+// DAY PICKER (1..7) — substitui o slider de "dias por semana"
+// ====================================================
+function setDaysCount(prefix, n) {
+  const input = document.getElementById(prefix + 'Days');
+  const valEl = document.getElementById(prefix + 'DaysVal');
+  input.value = n;
+  valEl.textContent = n + (n === 1 ? ' dia' : ' dias');
+  document.querySelectorAll('#' + prefix + 'DaysPicker .day-btn').forEach((btn, idx) => {
+    btn.classList.toggle('selected', idx + 1 === n);
+  });
+}
+
+// ====================================================
+// DURATION STEPPER — caixinha pré-definida (60min) com +/- e toggle min/horas
+// ====================================================
+const _durationUnit = {}; // 'min' | 'hour', por prefixo (ex: 'lift')
+
+function stepDuration(prefix, deltaSteps) {
+  const input = document.getElementById(prefix + 'Time');
+  let minutes = parseInt(input.value, 10) || 60;
+  const unit = _durationUnit[prefix] || 'min';
+  const stepSize = unit === 'hour' ? 30 : 10; // passo de 30min no modo horas, 10min no modo minutos
+  minutes = Math.max(10, Math.min(300, minutes + deltaSteps * stepSize));
+  input.value = minutes;
+  _renderDuration(prefix);
+}
+
+function setDurationUnit(prefix, unit) {
+  _durationUnit[prefix] = unit;
+  const minBtn = document.getElementById(prefix + 'TimeUnitBtn-min');
+  const hourBtn = document.getElementById(prefix + 'TimeUnitBtn-hour');
+  if (minBtn) minBtn.classList.toggle('active', unit === 'min');
+  if (hourBtn) hourBtn.classList.toggle('active', unit === 'hour');
+  _renderDuration(prefix);
+}
+
+function _renderDuration(prefix) {
+  const minutes = parseInt(document.getElementById(prefix + 'Time').value, 10) || 60;
+  const unit = _durationUnit[prefix] || 'min';
+  const valEl = document.getElementById(prefix + 'TimeVal');
+  if (unit === 'hour') {
+    const hours = minutes / 60;
+    const hoursLabel = Number.isInteger(hours) ? hours : hours.toFixed(1);
+    valEl.textContent = `${hoursLabel} ${hours === 1 ? 'hora' : 'horas'}`;
+  } else {
+    valEl.textContent = `${minutes} min`;
+  }
 }
 
 // TAGS
@@ -5233,7 +5363,12 @@ function openQtyEditor(event, btnEl, mealIdx, foodIdx, context) {
   if (!fd) return;
 
   _qtyCtx = { mealIdx, foodIdx, context, foodName: fi.name };
-  _qtyUnitCfg = FOOD_UNIT_CONFIG[fi.name] || null;
+  // Só tratamos como "contável por unidade" (toggle Gramas/Unidades) quando o tipo
+  // for 'count' (ovo, banana, maçã...), pois só esses têm gramsPerUnit definido.
+  // Alimentos do tipo 'spoon' (arroz, feijão, azeite, whey...) só têm spoonG e
+  // não devem forçar o modo "unidades" — senão o cálculo vira NaN.
+  const rawUnitCfg = FOOD_UNIT_CONFIG[fi.name] || null;
+  _qtyUnitCfg = (rawUnitCfg && rawUnitCfg.type === 'count') ? rawUnitCfg : null;
 
   // btnEl is passed directly from onclick="...this..." — always reliable
   const pop = document.getElementById('qtyEditorPopover');
@@ -5280,7 +5415,12 @@ function setQtyMode(mode, currentG, fd) {
     gramsMode.style.display = 'block';
     unitsMode.style.display = 'none';
     const fdLocal = fd || (BR_FOODS[_qtyCtx && _qtyCtx.foodName]);
-    const maxG = (FOOD_MAX_G[_qtyCtx && _qtyCtx.foodName]) || 600;
+    // O teto configurado (FOOD_MAX_G) é só uma referência de porção "típica".
+    // Se a quantidade atual do plano já estiver nesse teto (ou perto dele),
+    // o usuário fica travado e não consegue aumentar pelo + ou pelo slider.
+    // Por isso, o teto real usado no editor nunca fica abaixo do valor atual + folga.
+    const configuredMax = (FOOD_MAX_G[_qtyCtx && _qtyCtx.foodName]) || 600;
+    const maxG = Math.max(configuredMax, grams + 200);
     const slider = document.getElementById('qtySlider');
     slider.max = maxG;
     slider.value = grams;
@@ -5340,9 +5480,14 @@ function closeQtyPopover() {
 
 function qtyStep(delta) {
   const input = document.getElementById('qtyGramsInput');
-  const newVal = Math.max(5, Math.min(parseInt(input.max) || 600, (parseInt(input.value) || 0) + delta));
+  const slider = document.getElementById('qtySlider');
+  const current = parseInt(input.value) || 0;
+  let newVal = Math.max(5, current + delta);
+  // Se o novo valor ultrapassar o teto configurado, estica o teto em vez de travar o valor.
+  let maxG = parseInt(input.max) || 600;
+  if (newVal > maxG) { maxG = newVal + 200; input.max = maxG; slider.max = maxG; }
   input.value = newVal;
-  document.getElementById('qtySlider').value = newVal;
+  slider.value = newVal;
   if (_qtyCtx) qtyUpdatePreview(newVal, BR_FOODS[_qtyCtx.foodName]);
 }
 
@@ -5353,7 +5498,12 @@ function qtySliderChanged(val) {
 
 function qtyInputChanged(val) {
   const v = Math.max(5, parseInt(val) || 5);
-  document.getElementById('qtySlider').value = v;
+  const input = document.getElementById('qtyGramsInput');
+  const slider = document.getElementById('qtySlider');
+  // Se o valor digitado ultrapassar o teto atual, estica o teto para acompanhar.
+  let maxG = parseInt(input.max) || 600;
+  if (v > maxG) { maxG = v + 200; input.max = maxG; slider.max = maxG; }
+  slider.value = v;
   if (_qtyCtx) qtyUpdatePreview(v, BR_FOODS[_qtyCtx.foodName]);
 }
 
