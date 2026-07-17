@@ -83,8 +83,11 @@ body {
 @media(max-width:480px) {
   .header h1 { font-size: clamp(30px, 9vw, 80px); letter-spacing: 1px; }
 }
-.btn-install-app {
+.install-btn-slot {
+  min-height: 46px; display: flex; align-items: center; justify-content: center;
   margin-top: 16px;
+}
+.btn-install-app {
   background: var(--accent); color: #fff; border: none;
   padding: 10px 22px; border-radius: 999px; font-family: 'DM Sans', sans-serif;
   font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
@@ -594,33 +597,26 @@ input[type=range]::-moz-range-thumb {
 .auth-btn-google:hover { border-color: var(--accent); color: var(--accent); }
 .auth-btn-google img { width: 20px; height: 20px; border-radius: 50%; }
 .auth-user-chip {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
   background: var(--card); border: 1px solid var(--border2);
-  border-radius: 999px; padding: 6px 14px 6px 6px;
-  cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.08);
-  transition: all 0.2s; position: relative;
+  border-radius: 999px; padding: 6px 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.08);
 }
-.auth-user-chip:hover { border-color: var(--accent); }
 .auth-user-chip img, .auth-user-avatar-fallback {
   width: 26px; height: 26px; border-radius: 50%; flex-shrink: 0;
   display: flex; align-items: center; justify-content: center;
   background: var(--accent); color: #fff; font-size: 12px; font-weight: 700;
 }
-.auth-user-name { font-size: 13px; font-weight: 600; color: var(--text); max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.auth-dropdown {
-  position: absolute; top: calc(100% + 8px); right: 0;
-  background: var(--card); border: 1px solid var(--border2);
-  border-radius: var(--radius2); box-shadow: 0 12px 32px rgba(0,0,0,0.18);
-  min-width: 180px; padding: 6px; display: none; flex-direction: column;
+.auth-user-name { font-size: 13px; font-weight: 600; color: var(--text); max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auth-inline-btn {
+  padding: 6px 11px; border-radius: 999px; font-size: 11px; font-weight: 700;
+  color: var(--accent); background: rgba(29,158,117,0.10); border: none;
+  cursor: pointer; white-space: nowrap; font-family: 'DM Sans', sans-serif;
+  transition: all 0.15s;
 }
-.auth-dropdown.open { display: flex; }
-.auth-dropdown-item {
-  padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 600;
-  color: var(--text2); background: none; border: none; text-align: left;
-  cursor: pointer; display: flex; align-items: center; gap: 8px; width: 100%;
-  font-family: 'DM Sans', sans-serif;
-}
-.auth-dropdown-item:hover { background: var(--bg3); color: var(--text); }
+.auth-inline-btn:hover { background: var(--accent); color: #fff; }
+.auth-inline-btn.out { color: #f87171; background: rgba(239,68,68,0.08); }
+.auth-inline-btn.out:hover { background: #f87171; color: #fff; }
 
 /* SAVED PLANS MODAL */
 .saved-plans-list { display: flex; flex-direction: column; gap: 10px; max-height: 360px; overflow-y: auto; margin-bottom: 20px; }
@@ -774,19 +770,20 @@ input[type=range]::-moz-range-thumb {
 .meal-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
 .meal-table th {
   background: var(--bg3); color: var(--text3); font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px;
-  text-align: left; border-bottom: 1px solid var(--border2);
+  text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 8px;
+  text-align: left; border-bottom: 2px solid var(--border2);
   font-size: 10px;
 }
-.meal-table td { padding: 5px 8px; border-bottom: 1px solid rgba(255,255,255,0.04); color: var(--text2); vertical-align: top; }
-.meal-table tr:last-child td { border-bottom: none; }
-.meal-table tr:hover td { background: rgba(255,255,255,0.02); }
+.meal-table td { padding: 10px 8px; border-bottom: 1px solid rgba(95,94,90,0.35); color: var(--text2); vertical-align: middle; }
+.meal-table tbody tr:last-child td { border-bottom: 2px solid rgba(95,94,90,0.45); }
+.meal-table tr:hover td { background: rgba(29,158,117,0.03); }
 .meal-table .food-name { color: var(--text); font-weight: 500; }
 .meal-table .kcal-cell { color: var(--accent); font-weight: 700; }
 .meal-table .prot-cell { color: var(--blue); font-weight: 600; }
 .meal-table .carb-cell { color: var(--accent); font-weight: 600; }
 .meal-table .fat-cell { color: var(--purple); font-weight: 600; }
-.meal-table tfoot td { font-weight: 700; color: var(--text); background: rgba(255,255,255,0.03); padding-top: 8px; }
+.meal-table tfoot td { font-weight: 700; color: var(--text); background: rgba(29,158,117,0.05); padding-top: 10px; border-bottom: none; }
+.meal-table .food-actions { display: flex; gap: 4px; flex-wrap: wrap; }
 
 /* MEAL MACRO BADGES */
 .meal-macro-badges {
@@ -1776,19 +1773,19 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
         <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="">
         Entrar com Google
       </button>
-      <div class="auth-user-chip" id="authSignedInChip" style="display:none" onclick="toggleAuthDropdown(event)">
+      <div class="auth-user-chip" id="authSignedInChip" style="display:none">
         <span id="authAvatarWrap"></span>
         <span class="auth-user-name" id="authUserName"></span>
-        <div class="auth-dropdown" id="authDropdown">
-          <button class="auth-dropdown-item" onclick="openMyPlansModal()">📂 Meus Planos</button>
-          <button class="auth-dropdown-item" onclick="fbSignOut()">🚪 Sair</button>
-        </div>
+        <button class="auth-inline-btn" onclick="openMyPlansModal()">📂 Meus Planos</button>
+        <button class="auth-inline-btn out" onclick="fbSignOut()">🚪 Sair</button>
       </div>
     </div>
 
     <h1>NUTRI ATLETA</h1>
     <p>Plano nutricional personalizado para corredores e praticantes de musculação</p>
-    <button class="btn-install-app" id="btnInstallApp" style="display:none" onclick="triggerInstallPrompt()">📲 Instalar App</button>
+    <div class="install-btn-slot">
+      <button class="btn-install-app" id="btnInstallApp" style="display:none" onclick="triggerInstallPrompt()">📲 Instalar App</button>
+    </div>
   </div>
 
   <!-- PROGRESS -->
@@ -2529,7 +2526,7 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 
     <div style="display:flex;gap:10px;flex-wrap:wrap">
       <button class="btn-recalc" onclick="resetAndRecalc()">← Refazer Cálculo</button>
-      <button class="btn-save-cloud" onclick="savePlanToCloud()">☁️ Salvar Plano na Nuvem</button>
+      <button class="btn-save-cloud" id="btnSavePlan" onclick="savePlanToCloud()">💾 Salvar Plano</button>
     </div>
 
     <!-- Header -->
@@ -5070,6 +5067,17 @@ Gerado em NutriAtleta`;
 let pendingCalcParams = null;
 let selectedVariation = null;
 let useVariation = false;
+
+// Permite ao módulo do Firebase (salvar/carregar planos) ler e restaurar
+// o estado do "plano variado" (dias diferentes na semana), que não faz
+// parte de window._lastRenderedParams.
+window.getVariationState = function () {
+  return { useVariation, selectedVariation };
+};
+window.setVariationState = function (v) {
+  useVariation = !!(v && v.useVariation);
+  selectedVariation = (v && v.selectedVariation) || null;
+};
 let currentWeekDay = 0;
 let selectedVarType = null; // 'fixed' | 'varied'
 
@@ -5864,7 +5872,7 @@ function buildMealItemEl(m, mealIdx, context) {
     tableHTML = `
       <div style="overflow-x:auto;-webkit-overflow-scrolling:touch;margin-top:12px"><table class="meal-table">
         <thead><tr>
-          <th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th><th></th>
+          <th>Alimento</th><th>Qtd.</th><th>Peso</th><th></th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th>
         </tr></thead>
         <tbody>
           ${m.foodItems.map((fi, foodIdx) => {
@@ -5881,23 +5889,22 @@ function buildMealItemEl(m, mealIdx, context) {
               <td class="food-name">${fi.name}${nameExtra}</td>
               <td><strong>${qtdDisplay}</strong></td>
               <td style="color:var(--text3);font-size:11px">${fi.g}g</td>
+              <td><div class="food-actions"><button class="btn-sub-food" onclick="openSubFoodModal(${mealIdx},${foodIdx},'${fi.name.replace(/'/g,"\\'")}','${role}','${context}');_subCtx.origG=${fi.g}">Substituir</button>
+              <button class="btn-sub-food" title="Editar quantidade" onclick="openQtyEditor(event,this,${mealIdx},${foodIdx},'${context}')">✏️</button>
+              <button class="btn-sub-food" style="border-color:rgba(179,58,30,0.3);color:var(--red)" onclick="removeAutoFoodItem(${mealIdx},${foodIdx},'${context}')">×</button></div></td>
               <td class="kcal-cell">${fi.cal}</td>
               <td class="prot-cell">${fi.p}</td>
               <td class="carb-cell">${fi.c}</td>
               <td class="fat-cell">${fi.f}</td>
-              <td><button class="btn-sub-food" onclick="openSubFoodModal(${mealIdx},${foodIdx},'${fi.name.replace(/'/g,"\\'")}','${role}','${context}');_subCtx.origG=${fi.g}">Substituir</button>
-              <button class="btn-sub-food" style="margin-left:4px" title="Editar quantidade" onclick="openQtyEditor(event,this,${mealIdx},${foodIdx},'${context}')">✏️</button>
-              <button class="btn-sub-food" style="margin-left:4px;border-color:rgba(179,58,30,0.3);color:var(--red)" onclick="removeAutoFoodItem(${mealIdx},${foodIdx},'${context}')">×</button></td>
             </tr>`;
           }).join('')}
         </tbody>
         <tfoot><tr>
-          <td colspan="3">Total desta refeição</td>
+          <td colspan="4">Total desta refeição</td>
           <td class="kcal-cell">${totCal}</td>
           <td class="prot-cell">${totP}</td>
           <td class="carb-cell">${totC}</td>
           <td class="fat-cell">${totF}</td>
-          <td></td>
         </tr></tfoot>
       </table></div>
       <div class="meal-macro-badges">
@@ -6460,7 +6467,7 @@ function renderMealCard(m, mealIdx) {
       <div class="meal-kcal"><div class="kcal-num">${m.calories}</div><div class="kcal-label">kcal</div></div>
     </div>
     <div style="overflow-x:auto"><table class="meal-table">
-      <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th><th></th></tr></thead>
+      <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th></th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th></tr></thead>
       <tbody>${m.foodItems.map((fi, foodIdx) => {
         const fdData = BR_FOODS[fi.name];
         const role = (fdData && fdData.role) || 'carb';
@@ -6470,14 +6477,14 @@ function renderMealCard(m, mealIdx) {
           <td class="food-name">${fi.name}${nameExtra}</td>
           <td><strong>${fi.qtdLabel || fi.g+'g'}</strong></td>
           <td style="color:var(--text3);font-size:11px">${fi.g}g</td>
+          <td><div class="food-actions"><button class="btn-sub-food" onclick="openSubFoodModal(${mi},${foodIdx},'${fi.name.replace(/'/g,"\\'")}','${role}','week');_subCtx.origG=${fi.g}">Substituir</button>
+          <button class="btn-sub-food" title="Editar quantidade" onclick="openQtyEditor(event,this,${mi},${foodIdx},'week')">✏️</button>
+          <button class="btn-sub-food" style="border-color:rgba(179,58,30,0.3);color:var(--red)" onclick="removeAutoFoodItem(${mi},${foodIdx},'week')">×</button></div></td>
           <td class="kcal-cell">${fi.cal}</td><td class="prot-cell">${fi.p}</td>
           <td class="carb-cell">${fi.c}</td><td class="fat-cell">${fi.f}</td>
-          <td><button class="btn-sub-food" onclick="openSubFoodModal(${mi},${foodIdx},'${fi.name.replace(/'/g,"\\'")}','${role}','week');_subCtx.origG=${fi.g}">Substituir</button>
-          <button class="btn-sub-food" style="margin-left:4px" title="Editar quantidade" onclick="openQtyEditor(event,this,${mi},${foodIdx},'week')">✏️</button>
-          <button class="btn-sub-food" style="margin-left:4px;border-color:rgba(179,58,30,0.3);color:var(--red)" onclick="removeAutoFoodItem(${mi},${foodIdx},'week')">×</button></td>
         </tr>`;
       }).join('')}</tbody>
-      <tfoot><tr><td colspan="3">Total</td><td class="kcal-cell">${totCal}</td><td class="prot-cell">${totP}</td><td class="carb-cell">${totC}</td><td class="fat-cell">${totF}</td><td></td></tr></tfoot>
+      <tfoot><tr><td colspan="4">Total</td><td class="kcal-cell">${totCal}</td><td class="prot-cell">${totP}</td><td class="carb-cell">${totC}</td><td class="fat-cell">${totF}</td></tr></tfoot>
     </table></div>
     <div class="meal-macro-badges">
       <div class="meal-macro-badge kcal">🔥 ${totCal} kcal</div>
@@ -6521,6 +6528,9 @@ function resetAndRecalc() {
   if (mealsSectionEl) mealsSectionEl.style.display = '';
   const weekPlanEl = document.getElementById('weekPlanSection');
   if (weekPlanEl) weekPlanEl.style.display = 'none';
+
+  // Um novo plano começa "sem versão salva" — o próximo salvamento cria um plano novo na nuvem
+  if (window.resetCloudPlanId) window.resetCloudPlanId();
 
   goStep(1);
 }
@@ -7249,7 +7259,7 @@ if (isAppInstalled()) hideInstallBtn();
     getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
   import {
-    getFirestore, collection, addDoc, doc, getDoc, getDocs, deleteDoc,
+    getFirestore, collection, addDoc, setDoc, doc, getDoc, getDocs, deleteDoc,
     query, orderBy, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -7307,15 +7317,6 @@ if (isAppInstalled()) hideInstallBtn();
     try { await signOut(auth); } catch (err) { console.error(err); }
   };
 
-  window.toggleAuthDropdown = function (e) {
-    e.stopPropagation();
-    document.getElementById('authDropdown').classList.toggle('open');
-  };
-  document.addEventListener('click', () => {
-    const dd = document.getElementById('authDropdown');
-    if (dd) dd.classList.remove('open');
-  });
-
   function renderAuthUI(user) {
     const signedOutBtn = document.getElementById('authSignedOutBtn');
     const signedInChip = document.getElementById('authSignedInChip');
@@ -7342,6 +7343,24 @@ if (isAppInstalled()) hideInstallBtn();
   });
 
   // ---------------- SALVAR / LISTAR / CARREGAR / EXCLUIR PLANOS ----------------
+
+  // ID do plano atualmente aberto na nuvem (null = ainda não foi salvo nenhuma vez)
+  let _currentCloudPlanId = null;
+  let _currentCloudPlanName = null;
+
+  function updateSaveButtonLabel() {
+    const btn = document.getElementById('btnSavePlan');
+    if (!btn) return;
+    btn.textContent = _currentCloudPlanId ? '💾 Salvar' : '💾 Salvar Plano';
+  }
+
+  // Chamado pela tela quando o usuário começa um cálculo novo do zero
+  window.resetCloudPlanId = function () {
+    _currentCloudPlanId = null;
+    _currentCloudPlanName = null;
+    updateSaveButtonLabel();
+  };
+
   window.savePlanToCloud = async function () {
     if (!window._lastRenderedParams) {
       alert('Gere um plano primeiro antes de salvar.');
@@ -7351,21 +7370,33 @@ if (isAppInstalled()) hideInstallBtn();
       await window.fbSignIn();
       if (!auth.currentUser) return; // usuário cancelou o login
     }
-    const defaultName = `Plano ${new Date().toLocaleDateString('pt-BR')}`;
-    const name = prompt('Dê um nome para este plano:', defaultName);
-    if (name === null) return; // cancelou
 
     try {
-      const payload = {
-        name: name || defaultName,
+      const variationState = window.getVariationState ? window.getVariationState() : null;
+      const basePayload = {
         state: JSON.parse(JSON.stringify(state)),
         formFields: getFormFieldsSnapshot(),
         result: JSON.parse(JSON.stringify(window._lastRenderedParams)),
-        createdAt: serverTimestamp()
+        variationState: variationState ? JSON.parse(JSON.stringify(variationState)) : null
       };
-      const ref = collection(db, 'users', auth.currentUser.uid, 'plans');
-      await addDoc(ref, payload);
-      alert('✅ Plano salvo na nuvem com sucesso!');
+
+      if (_currentCloudPlanId) {
+        // Já existe uma versão salva desse plano — apenas atualiza (não pede nome de novo)
+        const ref = doc(db, 'users', auth.currentUser.uid, 'plans', _currentCloudPlanId);
+        await setDoc(ref, { ...basePayload, name: _currentCloudPlanName, updatedAt: serverTimestamp() }, { merge: true });
+        alert('✅ Plano atualizado!');
+      } else {
+        // Primeiro salvamento desse plano — cria um novo e pede um nome
+        const defaultName = `Plano ${new Date().toLocaleDateString('pt-BR')}`;
+        const name = prompt('Dê um nome para este plano:', defaultName);
+        if (name === null) return; // cancelou
+        const ref = collection(db, 'users', auth.currentUser.uid, 'plans');
+        const docRef = await addDoc(ref, { ...basePayload, name: name || defaultName, createdAt: serverTimestamp() });
+        _currentCloudPlanId = docRef.id;
+        _currentCloudPlanName = name || defaultName;
+        updateSaveButtonLabel();
+        alert('✅ Plano salvo com sucesso!');
+      }
     } catch (err) {
       console.error(err);
       alert('Não foi possível salvar o plano. Tente novamente.');
@@ -7373,7 +7404,6 @@ if (isAppInstalled()) hideInstallBtn();
   };
 
   window.openMyPlansModal = async function () {
-    document.getElementById('authDropdown').classList.remove('open');
     const modal = document.getElementById('myPlansModal');
     const listEl = document.getElementById('savedPlansList');
     modal.style.display = 'flex';
@@ -7434,9 +7464,17 @@ if (isAppInstalled()) hideInstallBtn();
       if (d.state) Object.assign(state, d.state);
       restoreFormFields(d.formFields);
 
+      // Restaura se era um "plano variado" (dias diferentes na semana) antes de renderizar
+      if (window.setVariationState) window.setVariationState(d.variationState);
+
       window.closeMyPlansModal();
       renderResult(d.result);
       goStep(6);
+
+      // Esse plano já existe na nuvem — próximo clique em salvar deve atualizar, não duplicar
+      _currentCloudPlanId = planId;
+      _currentCloudPlanName = d.name || null;
+      updateSaveButtonLabel();
     } catch (err) {
       console.error(err);
       alert('Não foi possível carregar este plano.');
@@ -7448,6 +7486,7 @@ if (isAppInstalled()) hideInstallBtn();
     if (!confirm('Excluir este plano salvo? Essa ação não pode ser desfeita.')) return;
     try {
       await deleteDoc(doc(db, 'users', auth.currentUser.uid, 'plans', planId));
+      if (_currentCloudPlanId === planId) window.resetCloudPlanId();
       window.openMyPlansModal(); // atualiza a lista
     } catch (err) {
       console.error(err);
