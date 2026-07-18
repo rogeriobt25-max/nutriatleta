@@ -4,7 +4,7 @@
 // Isso garante que qualquer atualização do site chega pra quem já instalou o app,
 // sem precisar desinstalar nada.
 
-const CACHE_NAME = 'nutriatleta-cache-v2'; // ⚠️ Aumente esse número a cada atualização importante
+const CACHE_NAME = 'nutriatleta-cache-v3'; // ⚠️ Aumente esse número a cada atualização importante
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

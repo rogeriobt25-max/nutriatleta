@@ -485,11 +485,6 @@ input[type=range]::-moz-range-thumb {
   display: grid; grid-template-columns: auto 1fr auto;
   align-items: start; gap: 16px; position: relative;
 }
-.meal-item::before {
-  content: ''; position: absolute; left: 48px; top: 48px; bottom: -12px;
-  width: 1px; background: var(--border); z-index: 0;
-}
-.meal-item:last-child::before { display: none; }
 .meal-icon-wrap {
   width: 40px; height: 40px; border-radius: 50%;
   background: rgba(29,158,117,0.09); border: 1px solid rgba(29,158,117,0.18);
@@ -2798,6 +2793,18 @@ const state = {
 };
 
 // ====================================================
+// BUSCA SEM ACENTO (normaliza texto para comparação)
+// Ex: normalizeSearchStr('Pão') === normalizeSearchStr('pao') === 'pao'
+// ====================================================
+function normalizeSearchStr(s) {
+  return (s || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+// ====================================================
 // FOOD PREFERENCES (Step 5)
 // ====================================================
 const PREF_LIMITS = {
@@ -3492,6 +3499,7 @@ const BR_FOODS = {
   'Batata-doce cozida':           { cal:86,  p:1.6, c:20,  g:0.1, unit:'1 unidade média (130g)',   role:'carb' },
   'Pão francês':                  { cal:300, p:9,   c:58,  g:3,   unit:'1 unidade (50g)',           role:'carb' },
   'Pão integral':                 { cal:247, p:9,   c:45,  g:3.4, unit:'2 fatias (60g)',            role:'carb' },
+  'Pão de forma':                 { cal:253, p:12,  c:44.1,g:2.7, unit:'2 fatias (50g)',            role:'carb' },  // TACO: pão de forma (branco)
   'Tapioca':                      { cal:358, p:0.2, c:88,  g:0.2, unit:'2 col sopa farinha (30g)', role:'carb' },
   'Whey protein':                 { cal:380, p:75,  c:7,   g:5,   unit:'1 scoop (30g)',             role:'prot', vegan:false },
   'Iogurte grego integral':       { cal:97,  p:9,   c:3.6, g:5,   unit:'pote individual (170g)',   role:'prot', vegan:false },
@@ -3571,6 +3579,7 @@ const FOOD_MAX_G = {
   'Manga':                        240,  // 2 fatias × 120g
   'Laranja':                      260,  // 2 unidades × 130g
   'Pão integral':                 180,  // 3 fatias × 60g (máx realista no café)
+  'Pão de forma':                 150,  // 6 fatias × 25g (máx realista no café)
   'Pão francês':                  150,  // 3 unidades × 50g
   'Feijão cozido':                160,  // máx 2 conchas
   'Peito de frango grelhado':     250,  // porção realista
@@ -4132,6 +4141,7 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
     'Ervilha cozida':               80, 'Cuscuz de milho cozido':      100,
     // Carboidratos café
     'Pão integral':                 60, 'Pão francês':                  50,
+    'Pão de forma':                 50,
     'Pão de queijo':                60, 'Tapioca':                      30,
     'Aveia em flocos':              40, 'Aveia em flocos finos':        40,
     'Granola sem açúcar':           40,
@@ -5193,14 +5203,14 @@ function closeSubFoodModal(e) {
 let _subFoodAllCandidates = [];
 
 function filterSubFoodList(query) {
-  const q = query.trim().toLowerCase();
+  const q = normalizeSearchStr(query);
   if (!q) {
     renderSubFoodCandidates(_subFoodAllCandidates);
     return;
   }
   // Quando há busca, pesquisa em todos os alimentos do banco (não só mesmo role)
   const allCandidates = Object.entries(BR_FOODS).filter(([name]) => name !== (_subCtx && _subCtx.foodName));
-  const filtered = allCandidates.filter(([name]) => name.toLowerCase().includes(q));
+  const filtered = allCandidates.filter(([name]) => normalizeSearchStr(name).includes(q));
   renderSubFoodCandidates(filtered);
 }
 
@@ -5311,12 +5321,12 @@ function showAddFoodCat(role, tabEl) {
 }
 
 function searchAddFood(query) {
-  const q = query.trim().toLowerCase();
+  const q = normalizeSearchStr(query);
   const dropdown = document.getElementById('addFoodDropdown');
   if (!q) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
   const results = ALL_FOODS_LIST
-    .filter(f => f.name.toLowerCase().includes(q))
-    .sort((a,b) => a.name.toLowerCase().indexOf(q) - b.name.toLowerCase().indexOf(q))
+    .filter(f => normalizeSearchStr(f.name).includes(q))
+    .sort((a,b) => normalizeSearchStr(a.name).indexOf(q) - normalizeSearchStr(b.name).indexOf(q))
     .slice(0, 10);
   if (!results.length) {
     dropdown.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text3)">Nenhum alimento encontrado</div>';
@@ -6181,6 +6191,7 @@ function formatShoppingQty(name, weeklyG) {
     'Pera':                  { gpUnit: 130, label: 'unidade',labelP: 'unidades' },
     'Pão francês':           { gpUnit: 50,  label: 'unidade',labelP: 'unidades' },
     'Pão integral':          { gpUnit: 25,  label: 'fatia',  labelP: 'fatias' },
+    'Pão de forma':          { gpUnit: 25,  label: 'fatia',  labelP: 'fatias' },
     'Pão de queijo':         { gpUnit: 30,  label: 'unidade',labelP: 'unidades' },
     'Batata-doce cozida':    { gpUnit: 130, label: 'unidade',labelP: 'unidades' },
     'Iogurte grego integral':{ gpUnit: 170, label: 'pote',   labelP: 'potes' },
@@ -6672,7 +6683,7 @@ const ROLE_ICONS = { prot: '🥩', carb: '🌾', fat: '🥑', fruit: '🍌' };
 const ROLE_LABELS = { prot: 'Proteína', carb: 'Carboidrato', fat: 'Gordura', fruit: 'Fruta' };
 
 function searchFood(mealKey, query) {
-  const q = query.trim().toLowerCase();
+  const q = normalizeSearchStr(query);
   const dropdown = document.getElementById('mb-dropdown-' + mealKey);
 
   if (!q) {
@@ -6683,10 +6694,10 @@ function searchFood(mealKey, query) {
 
   // Filter foods — score: starts with > includes
   const results = ALL_FOODS_LIST
-    .filter(f => f.name.toLowerCase().includes(q))
+    .filter(f => normalizeSearchStr(f.name).includes(q))
     .sort((a, b) => {
-      const ai = a.name.toLowerCase().indexOf(q);
-      const bi = b.name.toLowerCase().indexOf(q);
+      const ai = normalizeSearchStr(a.name).indexOf(q);
+      const bi = normalizeSearchStr(b.name).indexOf(q);
       return ai - bi;
     })
     .slice(0, 10);
@@ -6756,6 +6767,7 @@ const FOOD_UNIT_CONFIG = {
   'Castanha do Pará':         { type:'count', gramsPerUnit:5,   unitLabel:'unidade', unitLabelPlural:'unidades' },
   'Pão francês':              { type:'count', gramsPerUnit:50,  unitLabel:'unidade', unitLabelPlural:'unidades' },
   'Pão de queijo':            { type:'count', gramsPerUnit:30,  unitLabel:'unidade', unitLabelPlural:'unidades' },
+  'Pão de forma':             { type:'count', gramsPerUnit:25,  unitLabel:'fatia',   unitLabelPlural:'fatias'   },
   'Batata-doce cozida':       { type:'count', gramsPerUnit:130, unitLabel:'unidade', unitLabelPlural:'unidades' },
   'Batata inglesa cozida':    { type:'count', gramsPerUnit:130, unitLabel:'unidade', unitLabelPlural:'unidades' },
   'Iogurte grego integral':   { type:'count', gramsPerUnit:170, unitLabel:'pote',    unitLabelPlural:'potes'    },
@@ -7118,7 +7130,7 @@ function setAddFoodCat(cat, btn) {
 }
 
 function filterAddFoodModal(query) {
-  _addFoodModalQuery = query.trim().toLowerCase();
+  _addFoodModalQuery = normalizeSearchStr(query);
   // Se digitou algo, força renderizar mesmo sem categoria selecionada
   if (_addFoodModalQuery && !_addFoodModalCat) {
     _addFoodModalCat = 'all';
@@ -7148,8 +7160,8 @@ function renderAddFoodList() {
 
   // Filtrar por busca
   if (_addFoodModalQuery) {
-    items = items.filter(f => f.name.toLowerCase().includes(_addFoodModalQuery))
-      .sort((a, b) => a.name.toLowerCase().indexOf(_addFoodModalQuery) - b.name.toLowerCase().indexOf(_addFoodModalQuery));
+    items = items.filter(f => normalizeSearchStr(f.name).includes(_addFoodModalQuery))
+      .sort((a, b) => normalizeSearchStr(a.name).indexOf(_addFoodModalQuery) - normalizeSearchStr(b.name).indexOf(_addFoodModalQuery));
   } else {
     // Sem busca: sugestões da refeição primeiro dentro da categoria
     const suggestions = QUICK_ADD_SUGGESTIONS[mealKey] || [];
