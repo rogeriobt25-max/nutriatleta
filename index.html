@@ -406,7 +406,7 @@ input[type=range]::-moz-range-thumb {
 @media(max-width:480px){ .macro-grid { grid-template-columns: 1fr; } }
 .macro-card {
   background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius); padding: 20px; position: relative; overflow: hidden;
+  border-radius: var(--radius); padding: 14px 16px; position: relative; overflow: hidden;
 }
 .macro-card::after {
   content: ''; position: absolute; bottom: 0; left: 0; right: 0;
@@ -415,18 +415,18 @@ input[type=range]::-moz-range-thumb {
 .macro-card.prot::after { background: var(--blue); }
 .macro-card.carb::after { background: var(--accent); }
 .macro-card.fat::after { background: var(--purple); }
-.macro-icon { font-size: 28px; margin-bottom: 10px; }
-.macro-name { font-size: 12px; color: var(--text2); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+.macro-icon { font-size: 18px; margin-bottom: 4px; }
+.macro-name { font-size: 11px; color: var(--text2); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
 .macro-grams {
-  font-family: 'Bebas Neue', sans-serif; font-size: 44px; line-height: 1;
-  margin: 4px 0;
+  font-family: 'Bebas Neue', sans-serif; font-size: 28px; line-height: 1;
+  margin: 2px 0;
 }
 .macro-card.prot .macro-grams { color: var(--blue); }
 .macro-card.carb .macro-grams { color: var(--accent); }
 .macro-card.fat .macro-grams { color: var(--purple); }
-.macro-grams span { font-size: 18px; color: var(--text2); }
-.macro-kcal { font-size: 13px; color: var(--text2); }
-.macro-bar-bg { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 10px; }
+.macro-grams span { font-size: 13px; color: var(--text2); }
+.macro-kcal { font-size: 11px; color: var(--text2); }
+.macro-bar-bg { height: 4px; background: var(--bg3); border-radius: 2px; margin-top: 6px; }
 .macro-bar { height: 4px; border-radius: 2px; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
 .macro-card.prot .macro-bar { background: #185FA5; }
 .macro-card.carb .macro-bar { background: var(--accent); }
@@ -796,48 +796,6 @@ input[type=range]::-moz-range-thumb {
 .meal-macro-badge.fat  { background: rgba(109,63,160,0.12); color: var(--purple); }
 .meal-macro-badge.kcal { background: rgba(95,94,90,0.10); color: var(--text2); }
 
-/* DAILY MACRO SUMMARY CARD */
-.daily-macro-card {
-  background: linear-gradient(135deg, rgba(29,158,117,0.07), rgba(24,95,165,0.05));
-  border: 1px solid rgba(29,158,117,0.22); border-radius: var(--radius);
-  padding: 20px; margin-bottom: 20px;
-}
-.daily-macro-title {
-  font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 2px;
-  display: flex; align-items: center; gap: 8px; margin-bottom: 14px;
-}
-.daily-macro-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
-@media(max-width:500px){ .daily-macro-grid { grid-template-columns: repeat(2,1fr); } }
-.daily-macro-item {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: var(--radius2); padding: 12px; text-align: center;
-}
-.daily-macro-item .dmi-val {
-  font-family: 'Bebas Neue', sans-serif; font-size: 28px; line-height: 1;
-}
-.daily-macro-item .dmi-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); margin-top: 2px; }
-.daily-macro-item .dmi-target { font-size: 11px; color: var(--text2); margin-top: 2px; }
-.daily-macro-item .dmi-diff {
-  font-size: 10px; font-weight: 700; margin-top: 3px; padding: 1px 6px;
-  border-radius: 100px; display: inline-block;
-}
-.dmi-diff.ok   { background: rgba(46,204,113,0.15); color: #1D9E75; }
-.dmi-diff.warn { background: rgba(179,58,30,0.12); color: var(--red); }
-.dmi-prot .dmi-val { color: var(--blue); }
-.dmi-carb .dmi-val { color: var(--accent); }
-.dmi-fat  .dmi-val { color: var(--purple); }
-.dmi-kcal .dmi-val { color: var(--text); }
-
-/* MACRO VALIDATION BANNER */
-.macro-validation-banner {
-  border-radius: var(--radius2); padding: 12px 16px; margin-bottom: 16px;
-  display: flex; align-items: flex-start; gap: 10px; font-size: 13px;
-}
-.macro-validation-banner.ok   { background: rgba(46,204,113,0.08); border: 1px solid rgba(29,158,117,0.2); color: var(--accent); }
-.macro-validation-banner.warn { background: rgba(179,58,30,0.07);  border: 1px solid rgba(179,58,30,0.2);  color: var(--red); }
-.macro-validation-banner .mvb-icon { font-size: 18px; flex-shrink:0; }
-.macro-validation-banner .mvb-msg  { line-height: 1.5; }
-.macro-validation-banner .mvb-detail { font-size: 11px; opacity: 0.8; margin-top: 3px; }
 
 /* SUB-EQUIVALENCE NOTE */
 .equiv-note {
@@ -897,8 +855,9 @@ input[type=range]::-moz-range-thumb {
   .summary-hero { padding: 20px 16px; }
   .summary-hero-kcal { font-size: 56px; }
   .macro-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
-  .macro-card { padding: 14px 12px; }
-  .macro-grams { font-size: 34px; }
+  .macro-card { padding: 12px 14px; }
+  .macro-grid .macro-card:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .macro-grams { font-size: 26px; }
   .meal-item { grid-template-columns: auto 1fr; gap: 10px; padding: 12px 14px; }
   .meal-kcal { grid-column: 2; grid-row: 1; justify-self: end; }
   .nav-buttons { flex-direction: column; }
@@ -4722,83 +4681,6 @@ function renderResult(r) {
   const timeline = document.getElementById('mealTimeline');
   timeline.innerHTML = '';
 
-  // ---- Daily Macro Summary Card ----
-  const mv = mealValidation || {};
-  const totalP   = mv.totalP   || 0;
-  const totalC   = mv.totalC   || 0;
-  const totalF   = mv.totalF   || 0;
-  const totalCal = mv.totalCal || 0;
-
-  // Diffs para exibir nos badges
-  const pDiff = protG > 0 ? Math.round((totalP - protG) / protG * 100) : 0;
-  const cDiff = carbG > 0 ? Math.round((totalC - carbG) / carbG * 100) : 0;
-  const fDiff = fatG  > 0 ? Math.round((totalF - fatG)  / fatG  * 100) : 0;
-
-  function diffLabel(d) {
-    if (d === 0) return '= alvo';
-    return (d > 0 ? '+' : '') + d + '%';
-  }
-  function diffClass(d) { return Math.abs(d) <= 5 ? 'ok' : 'warn'; }
-
-  // Validation banner
-  let bannerHTML = '';
-  if (!mv.isValid && mv.adjustments && mv.adjustments.length) {
-    const adjList = mv.adjustments.map(a => {
-      const dir = a.diff > 0 ? '+' : '';
-      return `${a.macro}: ${a.actual}g (${dir}${a.diff}% vs ${a.target}g alvo)`;
-    }).join(' · ');
-    bannerHTML = `
-      <div class="macro-validation-banner warn">
-        <div class="mvb-icon">⚠️</div>
-        <div>
-          <div class="mvb-msg"><strong>Porções reajustadas automaticamente</strong> para compensar substituições</div>
-          <div class="mvb-detail">${adjList}</div>
-        </div>
-      </div>
-    `;
-  } else {
-    bannerHTML = `
-      <div class="macro-validation-banner ok">
-        <div class="mvb-icon">✅</div>
-        <div class="mvb-msg"><strong>Macros dentro da tolerância (±5%)</strong> — plano equilibrado</div>
-      </div>
-    `;
-  }
-
-  // Daily summary card
-  const dailySummaryCard = document.createElement('div');
-  dailySummaryCard.className = 'daily-macro-card';
-  dailySummaryCard.innerHTML = `
-    <div class="daily-macro-title">📊 Totais Diários das Refeições</div>
-    ${bannerHTML}
-    <div class="daily-macro-grid">
-      <div class="daily-macro-item dmi-kcal">
-        <div class="dmi-val">${totalCal}</div>
-        <div class="dmi-label">Kcal</div>
-        <div class="dmi-target">Alvo: ~${Math.round(target)}</div>
-      </div>
-      <div class="daily-macro-item dmi-prot">
-        <div class="dmi-val">${totalP}g</div>
-        <div class="dmi-label">Proteínas</div>
-        <div class="dmi-target">Alvo: ${protG}g</div>
-        <div class="dmi-diff ${diffClass(pDiff)}">${diffLabel(pDiff)}</div>
-      </div>
-      <div class="daily-macro-item dmi-carb">
-        <div class="dmi-val">${totalC}g</div>
-        <div class="dmi-label">Carboidratos</div>
-        <div class="dmi-target">Alvo: ${carbG}g</div>
-        <div class="dmi-diff ${diffClass(cDiff)}">${diffLabel(cDiff)}</div>
-      </div>
-      <div class="daily-macro-item dmi-fat">
-        <div class="dmi-val">${totalF}g</div>
-        <div class="dmi-label">Gorduras</div>
-        <div class="dmi-target">Alvo: ${fatG}g</div>
-        <div class="dmi-diff ${diffClass(fDiff)}">${diffLabel(fDiff)}</div>
-      </div>
-    </div>
-  `;
-  timeline.appendChild(dailySummaryCard);
-
   // Save params globally for substituir feature
   window._lastRenderedParams = params;
 
@@ -5790,7 +5672,6 @@ function applyFoodSubstitution(newFoodName) {
 
 function rerenderMealInTimeline(mealIdx, params) {
   const timeline = document.getElementById('mealTimeline');
-  // Meal cards start after the daily-macro-card (index 0), so mealIdx+1
   const mealDivs = timeline.querySelectorAll('.meal-item');
   if (mealDivs[mealIdx]) {
     const m = params.meals[mealIdx];
