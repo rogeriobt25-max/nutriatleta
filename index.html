@@ -1424,6 +1424,49 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 }
 .manual-builder-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 20px; }
 
+/* GLOBAL STICKY PLAN TOTALS BAR — follows the user while scrolling the result step */
+.plan-totals-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 500;
+  background: var(--card); border-top: 1px solid var(--border2);
+  box-shadow: 0 -6px 24px rgba(95,94,90,0.14);
+  padding: 10px 16px calc(10px + env(safe-area-inset-bottom, 0px));
+  display: none;
+}
+.plan-totals-bar.show { display: block; }
+.plan-totals-inner {
+  max-width: 860px; margin: 0 auto;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.plan-totals-kcal-wrap { min-width: 140px; }
+.plan-totals-kcal {
+  font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 1px; color: var(--text);
+  display: flex; align-items: baseline; gap: 6px; line-height: 1;
+}
+.plan-totals-kcal .ptb-target {
+  font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text2);
+  font-weight: 500; letter-spacing: 0;
+}
+.plan-totals-bar-bg { height: 4px; border-radius: 4px; background: var(--bg3); overflow: hidden; margin-top: 5px; width: 140px; max-width: 100%; }
+.plan-totals-bar-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg,#5F5E5A,#1D9E75); transition: width .3s; }
+.plan-totals-bar-fill.over { background: linear-gradient(90deg,#B33A1E,#B33A1E); }
+.plan-totals-status {
+  font-size: 12px; font-weight: 700; padding: 5px 12px; border-radius: 100px;
+  background: var(--bg2); color: var(--text2); white-space: nowrap;
+}
+.plan-totals-status.ok    { background: rgba(29,158,117,0.14);  color: var(--accent2); }
+.plan-totals-status.under { background: rgba(24,95,165,0.14);   color: var(--blue); }
+.plan-totals-status.over  { background: rgba(179,58,30,0.14);   color: var(--red); }
+.plan-totals-macros {
+  display: flex; gap: 12px; font-size: 11px; color: var(--text2);
+  margin-left: auto; flex-wrap: wrap;
+}
+.plan-totals-macros span { white-space: nowrap; }
+@media(max-width:560px) {
+  .plan-totals-inner { gap: 8px; }
+  .plan-totals-macros { margin-left: 0; order: 3; width: 100%; justify-content: space-between; }
+  .plan-totals-bar-bg { width: 100px; }
+}
+
 /* Macro tracker sticky */
 .macro-tracker-bar {
   background: var(--bg2); border: 1px solid var(--border2);
@@ -1688,7 +1731,7 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 @media print {
   #step-5 { display: none !important; }
   body { background: #fff !important; color: #000 !important; }
-  .bg-pattern, .progress-wrap, .nav-buttons, .action-row, .btn-recalc, .btn-save-cloud, .auth-widget { display: none !important; }
+  .bg-pattern, .progress-wrap, .nav-buttons, .action-row, .btn-recalc, .btn-save-cloud, .auth-widget, .plan-totals-bar { display: none !important; }
   .step { display: block !important; }
   #step-1, #step-2, #step-3, #step-4, #step-5 { display: none !important; }
   .card { border: 1px solid #ddd !important; background: #fff !important; box-shadow: none !important; }
@@ -1703,6 +1746,22 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 </head>
 <body>
 <div class="bg-pattern"></div>
+
+<!-- STICKY PLAN TOTALS BAR — meta calórica/macros vs. total atual do plano, visível ao rolar a tela -->
+<div class="plan-totals-bar" id="planTotalsBar">
+  <div class="plan-totals-inner">
+    <div class="plan-totals-kcal-wrap">
+      <div class="plan-totals-kcal">🔥 <span id="ptbKcal">0</span><span class="ptb-target">/ <span id="ptbKcalTarget">0</span> kcal</span></div>
+      <div class="plan-totals-bar-bg"><div class="plan-totals-bar-fill" id="ptbFill" style="width:0%"></div></div>
+    </div>
+    <div class="plan-totals-status" id="ptbStatus">—</div>
+    <div class="plan-totals-macros">
+      <span>💪 <span id="ptbProt">0</span>/<span id="ptbProtT">0</span>g</span>
+      <span>🌾 <span id="ptbCarb">0</span>/<span id="ptbCarbT">0</span>g</span>
+      <span>🥑 <span id="ptbFat">0</span>/<span id="ptbFatT">0</span>g</span>
+    </div>
+  </div>
+</div>
 
 <!-- MEUS PLANOS MODAL -->
 <div class="variation-modal-overlay" id="myPlansModal" style="display:none" onclick="if(event.target===this) closeMyPlansModal()">
@@ -2685,11 +2744,11 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
   </div><!-- end step-5 -->
 
 <!-- ADD FOOD MODAL (manual mode) -->
-<div class="add-food-modal-overlay" id="addFoodModal" style="display:none" onclick="closeAddFoodModalOutside(event)">
+<div class="add-food-modal-overlay" id="addFoodModal" style="display:none" onclick="closeManualAddFoodModalOutside(event)">
   <div class="add-food-modal">
     <div class="add-food-modal-header">
       <div class="add-food-modal-title">➕ Adicionar Alimento</div>
-      <button class="add-food-modal-close" onclick="closeAddFoodModal()">Cancelar</button>
+      <button class="add-food-modal-close" onclick="closeManualAddFoodModal()">Cancelar</button>
     </div>
     <div class="add-food-modal-subtitle">Busque ou selecione um alimento para adicionar à refeição.</div>
 
@@ -2701,7 +2760,7 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
         autocomplete="off">
     </div>
 
-    <div class="add-food-cat-tabs" id="addFoodCatTabs">
+    <div class="add-food-cat-tabs" id="addFoodCatTabsManual">
       <button class="add-food-cat-tab active" onclick="setAddFoodCat('all',this)">🍽️ Todos</button>
       <button class="add-food-cat-tab" onclick="setAddFoodCat('prot',this)">🥩 Proteínas</button>
       <button class="add-food-cat-tab" onclick="setAddFoodCat('carb',this)">🌾 Carboidratos</button>
@@ -2908,6 +2967,7 @@ function goStep(n) {
   currentStep = n;
   updateProgress();
   scrollToCurrentStep();
+  if (typeof showPlanTotalsBar === 'function') showPlanTotalsBar(n === 6);
 }
 
 // Rola até a seção do passo atual (barra de progresso + card),
@@ -3361,12 +3421,13 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
   // REGRAS DE EQUILÍBRIO ALMOÇO / JANTAR
   // 1. Proteína principal (filé): dividir igual entre almoço e jantar
   // 2. Arroz: jantar fica ~80% da porção do almoço
-  // 3. Feijão: máximo 2 conchas (160g) por refeição
+  // 3. Feijão: máximo 1 concha (80g) por refeição — prioridade de
+  //    proteína vai para carne/frango/peixe/whey, não para feijão
   // -------------------------------------------------------
   const MAIN_PROT_FOODS = new Set(['Peito de frango grelhado','Carne bovina magra grelhada','Tilápia grelhada','Atum em lata','Salmão grelhado','Peru grelhado','Atum fresco cru']);
   const RICE_FOODS      = new Set(['Arroz branco cozido','Arroz integral cozido','Arroz vermelho cozido']);
   const FEIJAO_FOODS    = new Set(['Feijão cozido','Feijão preto cozido']);
-  const FEIJAO_MAX_G    = 160; // 2 conchas de 80g
+  const FEIJAO_MAX_G    = 80; // 1 concha de 80g
 
   const almocoIdx = rawMeals.findIndex(m => m.name === 'Almoço');
   const jantarIdx = rawMeals.findIndex(m => m.name === 'Jantar' || m.name === 'Jantar/Ceia');
@@ -3417,7 +3478,7 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
       if (jantarRice) rawMeals[jantarIdx] = patchMeal(rawMeals[jantarIdx], patchRice(jantarRiceG, jantarRice.name));
     }
 
-    // --- 3. Feijão: máx 2 conchas (160g) ---
+    // --- 3. Feijão: máx 1 concha (80g) ---
     const patchFeijao = (fi) => {
       if (!FEIJAO_FOODS.has(fi.name) || fi.g <= FEIJAO_MAX_G) return fi;
       const ratio = FEIJAO_MAX_G / fi.g;
@@ -3434,7 +3495,80 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
   }
 
   // Validate & rebalance
-  const validation = validateAndRebalanceMeals(rawMeals, protG, carbG, fatG);
+  let validation = validateAndRebalanceMeals(rawMeals, protG, carbG, fatG);
+
+  // -------------------------------------------------------
+  // RECONCILIAÇÃO FINAL DE CALORIAS
+  // Os limites físicos aplicados acima (teto de arroz, teto de
+  // feijão, proteína principal igualada almoço/jantar) podem
+  // reduzir o total de calorias do plano abaixo (ou acima) da
+  // meta diária, mesmo quando os macros em gramas já estão
+  // dentro da faixa aceitável — porque validateAndRebalanceMeals
+  // só confere proteína/carbo/gordura, nunca o total de kcal.
+  // Este passo fecha essa diferença redistribuindo as calorias
+  // que faltam (ou sobram) entre alimentos com mais margem
+  // (gorduras, carboidratos fora do arroz/feijão, frutas), sem
+  // violar os limites máximos por alimento (FOOD_MAX_G).
+  // -------------------------------------------------------
+  const CAL_TOLERANCE = 0.03; // 3%
+  const calGap = target - validation.totalCal;
+
+  if (validation.totalCal > 0 && Math.abs(calGap) / target > CAL_TOLERANCE) {
+    const flexRoles = new Set(['fat', 'carb', 'fruit']);
+    const lockedFoods = new Set([...RICE_FOODS, ...FEIJAO_FOODS, ...MAIN_PROT_FOODS]);
+
+    // Soma calorias dos itens "flexíveis" (não travados por regra de porção fixa)
+    let flexCal = 0;
+    validation.meals.forEach(m => m.foodItems.forEach(fi => {
+      const fd = BR_FOODS[fi.name];
+      if (fd && flexRoles.has(fd.role) && !lockedFoods.has(fi.name)) flexCal += fi.cal;
+    }));
+
+    if (flexCal > 0) {
+      const calScale = Math.max(0.5, Math.min(2.0, (flexCal + calGap) / flexCal));
+      const newMeals = validation.meals.map(m => {
+        const newItems = m.foodItems.map(fi => {
+          const fd = BR_FOODS[fi.name];
+          if (!fd || !flexRoles.has(fd.role) || lockedFoods.has(fi.name)) return fi;
+          let newG = Math.max(5, Math.round(fi.g * calScale));
+          const foodMaxG = FOOD_MAX_G[fi.name];
+          if (foodMaxG && newG > foodMaxG) newG = foodMaxG;
+          if (newG > 400) newG = 400;
+          const unitCfg = FOOD_UNIT_CONFIG[fi.name];
+          if (unitCfg && unitCfg.type === 'count' && unitCfg.gramsPerUnit > 0) {
+            const units = Math.max(1, Math.round(newG / unitCfg.gramsPerUnit));
+            newG = units * unitCfg.gramsPerUnit;
+          }
+          const fdRatio = fi.g > 0 ? newG / fi.g : 1;
+          return {
+            ...fi, g: newG, qtdLabel: formatQtd(fi.name, newG),
+            cal: Math.round(fi.cal * fdRatio),
+            p: Math.round(fi.p * fdRatio * 10) / 10,
+            c: Math.round(fi.c * fdRatio * 10) / 10,
+            f: Math.round(fi.f * fdRatio * 10) / 10,
+            wasCalBalanced: true,
+          };
+        });
+        const newCal = newItems.reduce((s, fi) => s + fi.cal, 0);
+        return { ...m, foodItems: newItems, calories: newCal };
+      });
+
+      const newTotalP = newMeals.reduce((s, m) => s + m.foodItems.reduce((ss, fi) => ss + fi.p, 0), 0);
+      const newTotalC = newMeals.reduce((s, m) => s + m.foodItems.reduce((ss, fi) => ss + fi.c, 0), 0);
+      const newTotalF = newMeals.reduce((s, m) => s + m.foodItems.reduce((ss, fi) => ss + fi.f, 0), 0);
+      const newTotalCal = newMeals.reduce((s, m) => s + m.foodItems.reduce((ss, fi) => ss + fi.cal, 0), 0);
+
+      validation = {
+        ...validation,
+        meals: newMeals,
+        totalP: Math.round(newTotalP),
+        totalC: Math.round(newTotalC),
+        totalF: Math.round(newTotalF),
+        totalCal: Math.round(newTotalCal),
+      };
+    }
+  }
+
   return validation;
 }
 
@@ -3540,7 +3674,7 @@ const FOOD_MAX_G = {
   'Pão integral':                 180,  // 3 fatias × 60g (máx realista no café)
   'Pão de forma':                 150,  // 6 fatias × 25g (máx realista no café)
   'Pão francês':                  150,  // 3 unidades × 50g
-  'Feijão cozido':                160,  // máx 2 conchas
+  'Feijão cozido':                 80,  // máx 1 concha
   'Peito de frango grelhado':     250,  // porção realista
   'Carne bovina magra grelhada':  200,  // 2 bifes médios
   'Tilápia grelhada':             240,  // 2 filés médios
@@ -3575,7 +3709,7 @@ const FOOD_MAX_G = {
   'Proteína de ervilha':           90,
   'Tempeh':                       160,
   'Edamame cozido':               240,
-  'Feijão preto cozido':          200,
+  'Feijão preto cozido':           80,  // máx 1 concha — proteína extra vem de carne/frango/peixe/whey
   'Iogurte natural':              340,
   'Queijo minas padrão':          120,
   'Ricota':                        40, // máx 2 col sopa
@@ -4088,11 +4222,11 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
     // Proteínas veganas
     'Tofu':                        150, 'Tempeh':                      100,
     'Lentilha cozida':             160, 'Grão-de-bico cozido':         160,
-    'Feijão preto cozido':         160, 'Edamame cozido':              120,
+    'Feijão preto cozido':          80, 'Edamame cozido':              120,
     'Proteína de ervilha':          30,
     // Carboidratos principais
     'Arroz branco cozido':         180, 'Arroz integral cozido':       180,
-    'Arroz vermelho cozido':       180, 'Feijão cozido':               160,
+    'Arroz vermelho cozido':       180, 'Feijão cozido':                80,
     'Batata-doce cozida':          130, 'Mandioca cozida':             120,
     'Batata inglesa cozida':       130, 'Inhame cozido':               120,
     'Macarrão integral cozido':    150, 'Macarrão branco cozido':      150,
@@ -4118,6 +4252,9 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
   function getRealisticPortion(fname, role) {
     const base = REALISTIC_BASE_G[fname];
     if (base !== undefined) {
+      // Feijão (qualquer variedade): trava fixa em 1 concha (80g), sem escalar.
+      // O aumento de proteína deve vir de carne/frango/peixe/whey, não de feijão.
+      if (fname === 'Feijão cozido' || fname === 'Feijão preto cozido') return 80;
       if (role === 'fat' || role === 'fruit') return base; // porção fixa para gorduras e frutas
       if (isSnack || isPostWorkout) return Math.round(base * Math.max(0.8, Math.min(1.2, scale)));
       if (isBreakfast) return Math.round(base * Math.max(0.8, Math.min(1.4, scale)));
@@ -4555,6 +4692,105 @@ function buildNotes(st, runKm, runLong, carbWarning, waterTotal, bf) {
 // ====================================================
 // RENDER RESULT
 // ====================================================
+// ====================================================
+// STICKY PLAN TOTALS BAR (meta vs. total em tempo real)
+// ====================================================
+function showPlanTotalsBar(show) {
+  const bar = document.getElementById('planTotalsBar');
+  if (bar) bar.classList.toggle('show', !!show);
+}
+
+function renderPlanTotalsBar(totals, targets) {
+  const bar = document.getElementById('planTotalsBar');
+  if (!bar) return;
+  const kcal   = Math.round(totals.kcal || 0);
+  const kcalT  = Math.round(targets.kcal || 0);
+  const p      = Math.round(totals.p || 0);
+  const c      = Math.round(totals.c || 0);
+  const f      = Math.round(totals.f || 0);
+  const pT     = Math.round(targets.p || 0);
+  const cT     = Math.round(targets.c || 0);
+  const fT     = Math.round(targets.f || 0);
+
+  document.getElementById('ptbKcal').textContent = kcal;
+  document.getElementById('ptbKcalTarget').textContent = kcalT;
+  document.getElementById('ptbProt').textContent = p;
+  document.getElementById('ptbProtT').textContent = pT;
+  document.getElementById('ptbCarb').textContent = c;
+  document.getElementById('ptbCarbT').textContent = cT;
+  document.getElementById('ptbFat').textContent = f;
+  document.getElementById('ptbFatT').textContent = fT;
+
+  const fill = document.getElementById('ptbFill');
+  const statusEl = document.getElementById('ptbStatus');
+  const TOL = 0.05; // 5% de tolerância antes de avisar
+
+  if (kcalT <= 0) {
+    fill.style.width = '0%';
+    fill.classList.remove('over');
+    statusEl.textContent = '—';
+    statusEl.className = 'plan-totals-status';
+    return;
+  }
+
+  const pct = Math.min(140, (kcal / kcalT) * 100);
+  fill.style.width = Math.min(100, pct) + '%';
+
+  const diff = kcal - kcalT;
+  if (diff > kcalT * TOL) {
+    statusEl.textContent = `+${diff} kcal acima da meta`;
+    statusEl.className = 'plan-totals-status over';
+    fill.classList.add('over');
+  } else if (diff < -kcalT * TOL) {
+    statusEl.textContent = `${diff} kcal abaixo da meta`;
+    statusEl.className = 'plan-totals-status under';
+    fill.classList.remove('over');
+  } else {
+    statusEl.textContent = '✅ Dentro da meta';
+    statusEl.className = 'plan-totals-status ok';
+    fill.classList.remove('over');
+  }
+}
+
+// Modo "plano fixo" (auto, sem variação) — soma tudo de window._lastRenderedParams.meals
+function updateTimelineTotalsBar() {
+  if (!window._lastRenderedParams || !window._lastRenderedParams.meals) return;
+  let kcal = 0, p = 0, c = 0, f = 0;
+  window._lastRenderedParams.meals.forEach(m => {
+    (m.foodItems || []).forEach(fi => {
+      kcal += fi.cal || 0; p += fi.p || 0; c += fi.c || 0; f += fi.f || 0;
+    });
+  });
+  const t = window._lastRenderedParams;
+  renderPlanTotalsBar({ kcal, p, c, f }, { kcal: t.target, p: t.protG, c: t.carbG, f: t.fatG });
+}
+
+// Modo "plano variado" (semana) — recebe as refeições do dia já com overrides aplicados
+function updateWeekTotalsBarFrom(meals, dayTarget, dayProtG, dayCarbG, dayFatG) {
+  let kcal = 0, p = 0, c = 0, f = 0;
+  meals.forEach(m => {
+    (m.foodItems || []).forEach(fi => {
+      kcal += fi.cal || 0; p += fi.p || 0; c += fi.c || 0; f += fi.f || 0;
+    });
+  });
+  renderPlanTotalsBar({ kcal, p, c, f }, { kcal: dayTarget, p: dayProtG, c: dayCarbG, f: dayFatG });
+}
+
+// Modo "manual" — soma _manualMeals contra _manualMacroTargets
+function updateManualTotalsBar() {
+  if (typeof _manualMeals === 'undefined' || typeof _manualMacroTargets === 'undefined') return;
+  let kcal = 0, p = 0, c = 0, f = 0;
+  Object.values(_manualMeals).forEach(meal => {
+    (meal.foods || []).forEach(fi => {
+      kcal += fi.cal || 0; p += fi.p || 0; c += fi.c || 0; f += fi.f || 0;
+    });
+  });
+  renderPlanTotalsBar(
+    { kcal, p, c, f },
+    { kcal: _manualMacroTargets.kcal, p: _manualMacroTargets.prot, c: _manualMacroTargets.carb, f: _manualMacroTargets.fat }
+  );
+}
+
 function renderResult(r) {
   const params = r;
   const { bmr, tdee, target, adjust, imc, protG, protKcal, carbG, carbKcal, fatG, fatKcal,
@@ -4689,6 +4925,9 @@ function renderResult(r) {
     const div = buildMealItemEl(m, mealIdx, 'timeline');
     timeline.appendChild(div);
   });
+
+  // Atualiza a barra fixa de totais (será sobrescrita por renderWeekPlan/initManualBuilder se aplicável)
+  updateTimelineTotalsBar();
 
   // Food Suggestions
   const catsEl = document.getElementById('foodCats');
@@ -4875,7 +5114,7 @@ function exportPDF() {
     @page { size: A4; margin: 12mm 15mm; }
     @media print {
       body { background: #fff !important; color: #111 !important; font-size: 11px !important; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-      .bg-pattern, .progress-wrap, .nav-buttons, .action-row, .btn-recalc, .btn-save-cloud, .auth-widget, .header { display: none !important; }
+      .bg-pattern, .progress-wrap, .nav-buttons, .action-row, .btn-recalc, .btn-save-cloud, .auth-widget, .header, .plan-totals-bar { display: none !important; }
       #step-1, #step-2, #step-3, #step-4, #step-5 { display: none !important; }
       #step-6 { display: block !important; }
       .app { padding: 0 !important; max-width: 100% !important; }
@@ -4963,14 +5202,28 @@ let selectedVariation = null;
 let useVariation = false;
 
 // Permite ao módulo do Firebase (salvar/carregar planos) ler e restaurar
-// o estado do "plano variado" (dias diferentes na semana), que não faz
-// parte de window._lastRenderedParams.
+// o estado do "plano variado" (dias diferentes na semana) e as edições
+// manuais feitas dia a dia, que não fazem parte de window._lastRenderedParams.
 window.getVariationState = function () {
-  return { useVariation, selectedVariation };
+  return {
+    useVariation,
+    selectedVariation,
+    selectedVarType,
+    currentWeekDay,
+    weekSubOverrides: (typeof window._weekSubOverrides !== 'undefined') ? window._weekSubOverrides : null,
+    selectedMenuMode: (typeof _selectedMenuMode !== 'undefined') ? _selectedMenuMode : null,
+  };
 };
 window.setVariationState = function (v) {
   useVariation = !!(v && v.useVariation);
   selectedVariation = (v && v.selectedVariation) || null;
+  selectedVarType = (v && v.selectedVarType) || null;
+  currentWeekDay = (v && typeof v.currentWeekDay === 'number') ? v.currentWeekDay : 0;
+  window._restoreWeekDay = currentWeekDay;
+  window._weekSubOverrides = (v && v.weekSubOverrides) ? v.weekSubOverrides : null;
+  if (typeof _selectedMenuMode !== 'undefined') {
+    _selectedMenuMode = (v && v.selectedMenuMode) || null;
+  }
 };
 let currentWeekDay = 0;
 let selectedVarType = null; // 'fixed' | 'varied'
@@ -5678,6 +5931,7 @@ function rerenderMealInTimeline(mealIdx, params) {
     const newDiv = buildMealItemEl(m, mealIdx, 'timeline');
     mealDivs[mealIdx].replaceWith(newDiv);
   }
+  updateTimelineTotalsBar();
 }
 
 // ====================================================
@@ -6282,16 +6536,21 @@ function renderWeekPlan(params) {
     : 'Plano B — Leve (Seg/Qua/Sex/Dom) · Plano A — Clássico (Ter/Qui/Sáb)';
   document.getElementById('variationLabel').textContent = `— ${label}`;
 
+  // Se estamos restaurando um plano salvo, volta para o dia da semana que
+  // estava aberto quando o usuário salvou. Caso contrário (plano novo), começa no dia 0.
+  const startDay = (typeof window._restoreWeekDay === 'number') ? window._restoreWeekDay : 0;
+  window._restoreWeekDay = null; // consumido — próxima geração de plano volta ao padrão
+
   // Build tabs
   const tabsEl = document.getElementById('weekTabs');
   tabsEl.innerHTML = WEEKDAYS.map((day, i) => {
     const isTrain = getIsTrainingDay(i);
-    return `<div class="week-tab ${i === 0 ? 'active' : ''} ${!isTrain ? 'rest-day' : ''}" 
+    return `<div class="week-tab ${i === startDay ? 'active' : ''} ${!isTrain ? 'rest-day' : ''}" 
       onclick="showWeekDay(${i})" id="wt-${i}">${day.substring(0,3)}${isTrain ? ' 💪' : ' 😴'}</div>`;
   }).join('');
 
-  currentWeekDay = 0;
-  showWeekDay(0, params);
+  currentWeekDay = startDay;
+  showWeekDay(startDay, params);
   window._weekParams = params;
 }
 
@@ -6342,6 +6601,7 @@ function showWeekDay(dayIdx, params) {
   }
 
   container.innerHTML = macrosRow + meals.map((m, mealIdx) => renderMealCard(m, mealIdx)).join('');
+  updateWeekTotalsBarFrom(meals, dayTarget, dayProtG, dayCarbG, dayFatG);
 }
 
 function renderMealCard(m, mealIdx) {
@@ -6412,6 +6672,11 @@ function resetAndRecalc() {
   useVariation = false;
   selectedVariation = null;
   selectedVarType = null;
+  currentWeekDay = 0;
+  window._weekSubOverrides = null;
+  window._weekParams = null;
+  window._restoreWeekDay = null;
+  window._lastRenderedParams = null;
 
   // Restaura visibilidade das seções do resultado
   const manualEl = document.getElementById('manualBuilderSection');
@@ -6534,7 +6799,7 @@ function buildMealBlockHTML(mDef) {
     <div class="mb-meal-body" id="mb-body-${key}">
       <div class="mb-food-list" id="mb-list-${key}"></div>
 
-      <button class="btn-mb-add-food" onclick="openAddFoodModal('${key}')">➕ Adicionar Alimento</button>
+      <button class="btn-mb-add-food" onclick="openManualAddFoodModal('${key}')">➕ Adicionar Alimento</button>
 
       <div class="mb-meal-total" id="mb-total-${key}">
         <span class="mb-meal-total-item">🔥 <strong id="mb-t-kcal-${key}">0</strong> kcal</span>
@@ -6907,69 +7172,78 @@ function updateMacroTracker() {
   } else {
     missingEl.classList.remove('show');
   }
+
+  updateManualTotalsBar();
 }
 
 // ====================================================
 // FINALIZAR CARDÁPIO MANUAL
 // ====================================================
 function finalizarCardapioManual() {
-  // Build a summary and show in mealTimeline
   const timeline = document.getElementById('mealTimeline');
   timeline.style.display = 'block';
   timeline.innerHTML = '';
 
-  let anyMeal = false;
+  // Converte as refeições do builder manual para o mesmo formato usado pelo
+  // plano fixo/variado (foodItems, calories-alvo, etc). Isso permite reaproveitar
+  // buildMealItemEl (com os botões Substituir / Editar qtd / Remover / Adicionar)
+  // e faz o plano manual entrar automaticamente no salvamento na nuvem, já que
+  // passa a viver dentro de window._lastRenderedParams.meals.
+  const finalMeals = [];
   MANUAL_MEALS_DEF.forEach(mDef => {
     const meal = _manualMeals[mDef.key];
     if (!meal.foods.length) return;
-    anyMeal = true;
-    const totKcal = meal.foods.reduce((s,f)=>s+f.cal,0);
-    const totP = meal.foods.reduce((s,f)=>s+f.p,0).toFixed(1);
-    const totC = meal.foods.reduce((s,f)=>s+f.c,0).toFixed(1);
-    const totF = meal.foods.reduce((s,f)=>s+f.f,0).toFixed(1);
 
-    const div = document.createElement('div');
-    div.className = 'meal-item';
-    div.style.display = 'block';
-    div.style.marginBottom = '14px';
-    div.innerHTML = `
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">
-        <div class="meal-icon-wrap">${mDef.icon}</div>
-        <div style="flex:1">
-          <div class="meal-name">${mDef.name}</div>
-          <div class="meal-time">⏰ ${mDef.time}</div>
-        </div>
-        <div class="meal-kcal"><div class="kcal-num">${totKcal}</div><div class="kcal-label">kcal</div></div>
-      </div>
-      <div style="overflow-x:auto"><table class="meal-table">
-        <thead><tr><th>Alimento</th><th>Qtd.</th><th>Peso</th><th>Kcal</th><th>PROT.</th><th>CARB.</th><th>GORD.</th></tr></thead>
-        <tbody>${meal.foods.map(fi => {
-          const qtdDisplay = formatQtd(fi.name, fi.g);
-          return `<tr>
-          <td class="food-name">${fi.name}</td>
-          <td><strong>${qtdDisplay}</strong></td>
-          <td style="color:var(--text3);font-size:11px">${fi.g}g</td>
-          <td class="kcal-cell">${fi.cal}</td>
-          <td class="prot-cell">${fi.p}</td>
-          <td class="carb-cell">${fi.c}</td>
-          <td class="fat-cell">${fi.f}</td>
-        </tr>`;}).join('')}</tbody>
-        <tfoot><tr><td colspan="3">Total</td><td class="kcal-cell">${totKcal}</td><td class="prot-cell">${totP}</td><td class="carb-cell">${totC}</td><td class="fat-cell">${totF}</td></tr></tfoot>
-      </table></div>
-      <div class="meal-macro-badges">
-        <div class="meal-macro-badge kcal">🔥 ${totKcal} kcal</div>
-        <div class="meal-macro-badge prot">💪 ${totP}g prot</div>
-        <div class="meal-macro-badge carb">🌾 ${totC}g carb</div>
-        <div class="meal-macro-badge fat">🥑 ${totF}g gord</div>
-      </div>
-      ${getSaladSuggestion(mDef.name)}`;
-    timeline.appendChild(div);
+    const foodItems = meal.foods.map(fi => {
+      const fd = BR_FOODS[fi.name];
+      return {
+        name: fi.name,
+        g: fi.g,
+        qtdLabel: formatQtd(fi.name, fi.g),
+        cal: fi.cal,
+        p: fi.p,
+        c: fi.c,
+        f: fi.f,
+        role: (fd && fd.role) || fi.role,
+      };
+    });
+    const totKcal = foodItems.reduce((s, f) => s + f.cal, 0);
+    const totP    = foodItems.reduce((s, f) => s + (f.p || 0), 0);
+    const totC    = foodItems.reduce((s, f) => s + (f.c || 0), 0);
+    const totF    = foodItems.reduce((s, f) => s + (f.f || 0), 0);
+
+    finalMeals.push({
+      name: mDef.name,
+      icon: mDef.icon,
+      time: mDef.time,
+      focus: '',
+      calories: totKcal,           // meta desta refeição = o que você montou (base p/ alertas futuros)
+      targetProt: totP,
+      targetCarb: totC,
+      targetFat: totF,
+      pct: _manualMacroTargets.kcal > 0 ? (totKcal / _manualMacroTargets.kcal) : 0,
+      foodItems,
+    });
   });
 
-  if (!anyMeal) {
+  if (!finalMeals.length) {
     timeline.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px">Nenhum alimento adicionado ainda.</div>';
     return;
   }
+
+  // Guarda como o plano "oficial" — a partir daqui ele se comporta como um
+  // plano fixo normal (editável e salvável).
+  if (window._lastRenderedParams) {
+    window._lastRenderedParams.meals = finalMeals;
+    window._lastRenderedParams._planMode = 'manual';
+  }
+
+  finalMeals.forEach((m, mealIdx) => {
+    const div = buildMealItemEl(m, mealIdx, 'timeline');
+    timeline.appendChild(div);
+  });
+
+  updateTimelineTotalsBar();
 
   // Hide builder, show summary
   document.getElementById('manualBuilderSection').style.display = 'none';
@@ -6983,29 +7257,29 @@ let _addFoodModalMealKey = null;
 let _addFoodModalCat = 'all';
 let _addFoodModalQuery = '';
 
-function openAddFoodModal(mealKey) {
+function openManualAddFoodModal(mealKey) {
   _addFoodModalMealKey = mealKey;
   _addFoodModalCat = null;
   _addFoodModalQuery = '';
   // Reset UI — nenhuma tab ativa, lista vazia
   document.getElementById('addFoodModalSearch').value = '';
-  document.querySelectorAll('#addFoodCatTabs .add-food-cat-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#addFoodCatTabsManual .add-food-cat-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('addFoodList').innerHTML = '<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px">Selecione um grupo acima ou busque pelo nome.</div>';
   document.getElementById('addFoodModal').style.display = 'flex';
 }
 
-function closeAddFoodModal() {
+function closeManualAddFoodModal() {
   document.getElementById('addFoodModal').style.display = 'none';
   _addFoodModalMealKey = null;
 }
 
-function closeAddFoodModalOutside(e) {
-  if (e.target === document.getElementById('addFoodModal')) closeAddFoodModal();
+function closeManualAddFoodModalOutside(e) {
+  if (e.target === document.getElementById('addFoodModal')) closeManualAddFoodModal();
 }
 
 function setAddFoodCat(cat, btn) {
   _addFoodModalCat = cat;
-  document.querySelectorAll('#addFoodCatTabs .add-food-cat-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('#addFoodCatTabsManual .add-food-cat-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
   renderAddFoodList();
 }
@@ -7079,7 +7353,7 @@ function addFoodFromModal(foodName) {
   // Open the meal block if closed
   const body = document.getElementById('mb-body-' + _addFoodModalMealKey);
   if (body && !body.classList.contains('open')) body.classList.add('open');
-  closeAddFoodModal();
+  closeManualAddFoodModal();
 }
 
 // ====================================================
@@ -7361,6 +7635,13 @@ if (isAppInstalled()) hideInstallBtn();
 
       // Restaura se era um "plano variado" (dias diferentes na semana) antes de renderizar
       if (window.setVariationState) window.setVariationState(d.variationState);
+
+      // Garante visibilidade correta independente do que estava sendo exibido antes
+      // (ex: se a sessão anterior estava no builder manual, ou mostrando outra semana)
+      const manualEl = document.getElementById('manualBuilderSection');
+      if (manualEl) manualEl.style.display = 'none';
+      const timelineEl = document.getElementById('mealTimeline');
+      if (timelineEl) timelineEl.style.display = '';
 
       window.closeMyPlansModal();
       renderResult(d.result);
