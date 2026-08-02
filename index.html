@@ -2137,16 +2137,22 @@ tr:hover .qty-edit-btn { opacity: 0.8; }
 
       <div class="form-grid" style="margin-bottom:24px">
         <div class="field">
-          <label class="pref-tag-label">Alimentos que NÃO gosta <span class="opt">(pressione Enter para adicionar)</span></label>
+          <label class="pref-tag-label">Alimentos que NÃO gosta <span class="opt">(busque no banco de alimentos ou digite e pressione Enter)</span></label>
           <div class="tags-input-wrap" id="dislikedWrap" onclick="document.getElementById('dislikedInput').focus()">
-            <input type="text" class="tags-input" id="dislikedInput" placeholder="Ex: brócolis..." onkeydown="addTag('disliked',event)">
+            <input type="text" class="tags-input" id="dislikedInput" placeholder="Ex: brócolis..." autocomplete="off"
+              oninput="searchExceptionFood('disliked', this.value)"
+              onkeydown="addTag('disliked',event)">
           </div>
+          <div class="food-search-dropdown" id="dislikedDropdown"></div>
         </div>
         <div class="field">
-          <label class="pref-tag-label">Alimentos que DESEJA incluir <span class="opt">(pressione Enter para adicionar)</span></label>
+          <label class="pref-tag-label">Alimentos que DESEJA incluir <span class="opt">(busque no banco de alimentos ou digite e pressione Enter)</span></label>
           <div class="tags-input-wrap" id="desiredWrap" onclick="document.getElementById('desiredInput').focus()">
-            <input type="text" class="tags-input" id="desiredInput" placeholder="Ex: aveia..." onkeydown="addTag('desired',event)">
+            <input type="text" class="tags-input" id="desiredInput" placeholder="Ex: aveia..." autocomplete="off"
+              oninput="searchExceptionFood('desired', this.value)"
+              onkeydown="addTag('desired',event)">
           </div>
+          <div class="food-search-dropdown" id="desiredDropdown"></div>
         </div>
       </div>
 
@@ -2898,7 +2904,8 @@ function toggleCalcDetails() {
 function renderCalcDetails(params) {
   const { bmr, tdee, target, adjust, protG, protKcal, carbG, carbKcal, fatG, fatKcal,
     waterTotal, waterBase, waterLifting, waterRunning, waterBaseRate, runMlPerHour,
-    liftHoursPerWeek, runHoursPerWeek, actFactor, bf, weight, height, age, protRate } = params;
+    liftHoursPerWeek, runHoursPerWeek, actFactor, bf, weight, height, age, protRate,
+    runningOn, runKm } = params;
   const sex = state.sex;
   const body = document.getElementById('calcDetailsBody');
   let bmrFormula = '';
@@ -2911,6 +2918,48 @@ function renderCalcDetails(params) {
   }
   const adjustMap = { lose_fat: 'Déficit −400 kcal', maintain: 'Manutenção +0 kcal', gain_muscle: 'Superávit +300 kcal', run_performance: 'Superávit leve +150 kcal', gain_and_run: 'Superávit moderado +250 kcal' };
   const adjLabel = adjustMap[state.goal] || '';
+
+  // Gordura e carboidrato: para quem corre, o carboidrato é calculado primeiro pelo
+  // volume de treino (g/kg) e a gordura vem do que sobra (com piso de segurança) — não
+  // o contrário. O texto explicativo abaixo precisa bater com o que foi de fato calculado.
+  const isRunnerDriven = runningOn && runKm > 0;
+  let fatStepHTML, carbStepHTML;
+  if (isRunnerDriven) {
+    let idealCarbPerKg;
+    if (runKm < 15) idealCarbPerKg = 3.5;
+    else if (runKm < 30) idealCarbPerKg = 4.5;
+    else if (runKm < 50) idealCarbPerKg = 5.5;
+    else if (runKm < 80) idealCarbPerKg = 7;
+    else idealCarbPerKg = 9;
+    carbStepHTML = `
+    <div class="calc-step">
+      <div class="calc-step-label">5. Carboidratos (prioridade — volume de corrida)</div>
+      <div class="calc-step-formula">${idealCarbPerKg}g/kg × ${weight}kg = ${carbG}g → ${Math.round(carbKcal)} kcal</div>
+      <div class="calc-step-result">Carboidratos = ${carbG}g/dia (${Math.round(carbKcal/target*100)}% das calorias)</div>
+      <div class="calc-step-note">Calculado primeiro pelo volume semanal de corrida (${runKm}km/sem), não como "o que sobrar"</div>
+    </div>`;
+    fatStepHTML = `
+    <div class="calc-step">
+      <div class="calc-step-label">6. Gorduras (restante, com piso mínimo)</div>
+      <div class="calc-step-formula">${Math.round(target)} − ${protKcal} (P) − ${Math.round(carbKcal)} (C) = ${Math.round(fatKcal)} kcal ÷ 9 = ${fatG}g</div>
+      <div class="calc-step-result">Gorduras = ${fatG}g/dia (${Math.round(fatKcal/target*100)}% das calorias)</div>
+      <div class="calc-step-note">Nunca abaixo de ~20% das calorias ou 0,6g/kg — piso de segurança hormonal</div>
+    </div>`;
+  } else {
+    fatStepHTML = `
+    <div class="calc-step">
+      <div class="calc-step-label">5. Gorduras</div>
+      <div class="calc-step-formula">25% de ${Math.round(target)} = ${Math.round(target*0.25)} kcal ÷ 9 = ${fatG}g</div>
+      <div class="calc-step-result">Gorduras = ${fatG}g/dia (25% das calorias)</div>
+    </div>`;
+    carbStepHTML = `
+    <div class="calc-step">
+      <div class="calc-step-label">6. Carboidratos</div>
+      <div class="calc-step-formula">${Math.round(target)} − ${protKcal} (P) − ${Math.round(fatKcal)} (G) = ${Math.round(carbKcal)} kcal ÷ 4 = ${carbG}g</div>
+      <div class="calc-step-result">Carboidratos = ${carbG}g/dia (${Math.round(carbKcal/target*100)}% das calorias)</div>
+    </div>`;
+  }
+
   body.innerHTML = `
     <div class="calc-step">
       <div class="calc-step-label">1. TMB — Taxa Metabólica Basal</div>
@@ -2935,16 +2984,8 @@ function renderCalcDetails(params) {
       <div class="calc-step-result">Proteína = ${protG}g/dia (${Math.round(protKcal/target*100)}% das calorias)</div>
       <div class="calc-step-note">Taxa baseada no objetivo: ${protRate.toFixed(1)}g/kg de peso corporal</div>
     </div>
-    <div class="calc-step">
-      <div class="calc-step-label">5. Gorduras</div>
-      <div class="calc-step-formula">25% de ${Math.round(target)} = ${Math.round(target*0.25)} kcal ÷ 9 = ${fatG}g</div>
-      <div class="calc-step-result">Gorduras = ${fatG}g/dia (25% das calorias)</div>
-    </div>
-    <div class="calc-step">
-      <div class="calc-step-label">6. Carboidratos</div>
-      <div class="calc-step-formula">${Math.round(target)} − ${protKcal} (P) − ${Math.round(fatKcal)} (G) = ${Math.round(carbKcal)} kcal ÷ 4 = ${carbG}g</div>
-      <div class="calc-step-result">Carboidratos = ${carbG}g/dia (${Math.round(carbKcal/target*100)}% das calorias)</div>
-    </div>
+    ${carbStepHTML}
+    ${fatStepHTML}
     <div class="calc-step">
       <div class="calc-step-label">7. Hidratação</div>
       <div class="calc-step-formula">Base: ${waterBaseRate}ml × ${weight}kg = ${waterBase}ml${waterLifting>0?' | Musc.: '+liftHoursPerWeek.toFixed(1)+'h/sem × 500ml/h ÷ 7 = '+waterLifting+'ml':''}${waterRunning>0?' | Corrida: '+runHoursPerWeek.toFixed(1)+'h/sem × '+runMlPerHour+'ml/h ÷ 7 = '+waterRunning+'ml':''}</div>
@@ -3167,6 +3208,8 @@ function addTag(type, e) {
   state[type === 'disliked' ? 'disliked' : 'desired'].push(val);
   renderTags();
   inp.value = '';
+  const dd = document.getElementById(type === 'disliked' ? 'dislikedDropdown' : 'desiredDropdown');
+  if (dd) { dd.classList.remove('open'); dd.innerHTML = ''; }
 }
 
 function removeTag(type, idx) {
@@ -3175,25 +3218,186 @@ function removeTag(type, idx) {
   renderTags();
 }
 
+// Busca ao vivo no banco de alimentos (mesmo padrão usado no "+ Adicionar alimento")
+// para os campos de exceção ("não gosta" / "deseja incluir"), garantindo que o que
+// for escolhido no dropdown bate exatamente com um item real do banco.
+function searchExceptionFood(type, query) {
+  const dropdown = document.getElementById(type === 'disliked' ? 'dislikedDropdown' : 'desiredDropdown');
+  if (!dropdown) return;
+  const q = normalizeSearchStr(query);
+  if (!q) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+  const results = ALL_FOODS_LIST
+    .filter(f => normalizeSearchStr(f.name).includes(q))
+    .sort((a, b) => normalizeSearchStr(a.name).indexOf(q) - normalizeSearchStr(b.name).indexOf(q))
+    .slice(0, 8);
+  if (!results.length) {
+    dropdown.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text3)">Nenhum alimento encontrado no banco — pressione Enter pra adicionar mesmo assim</div>';
+    dropdown.classList.add('open');
+    return;
+  }
+  dropdown.innerHTML = results.map(f => {
+    const role = f.role || 'carb';
+    const icon = ROLE_ICONS[role] || '🍽️';
+    const roleLabel = ROLE_LABELS[role] || role;
+    return `<div class="food-search-item" onclick="addExceptionFoodFromSearch('${type}','${f.name.replace(/'/g,"\\'")}')">
+      <div>
+        <span class="fsi-name">${icon} ${f.name}</span>
+        <span class="fsi-role-badge ${role}">${roleLabel}</span>
+      </div>
+      <span class="fsi-macros">${f.cal} kcal · P:${f.p}g · C:${f.c}g · G:${f.g}g</span>
+    </div>`;
+  }).join('');
+  dropdown.classList.add('open');
+}
+
+function addExceptionFoodFromSearch(type, foodName) {
+  if (!state[type].includes(foodName)) {
+    state[type].push(foodName);
+    renderTags();
+  }
+  const inputId = type === 'disliked' ? 'dislikedInput' : 'desiredInput';
+  const inp = document.getElementById(inputId);
+  if (inp) inp.value = '';
+  const dd = document.getElementById(type === 'disliked' ? 'dislikedDropdown' : 'desiredDropdown');
+  if (dd) { dd.classList.remove('open'); dd.innerHTML = ''; }
+}
+
 function renderTags() {
   const dw = document.getElementById('dislikedWrap');
   const desw = document.getElementById('desiredWrap');
   // Remove old chips
   dw.querySelectorAll('.tag-chip').forEach(t => t.remove());
   desw.querySelectorAll('.tag-chip').forEach(t => t.remove());
-  state.disliked.forEach((t,i) => {
+
+  function buildChip(text, type, idx, extraClass) {
     const chip = document.createElement('div');
-    chip.className = 'tag-chip bad';
-    chip.innerHTML = t + `<button onclick="removeTag('disliked',${i})">×</button>`;
-    dw.insertBefore(chip, document.getElementById('dislikedInput'));
+    chip.className = extraClass ? `tag-chip ${extraClass}` : 'tag-chip';
+    chip.appendChild(document.createTextNode(text)); // texto sempre como texto puro, nunca HTML
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = '×';
+    btn.onclick = () => removeTag(type, idx);
+    chip.appendChild(btn);
+    return chip;
+  }
+
+  state.disliked.forEach((t,i) => {
+    dw.insertBefore(buildChip(t, 'disliked', i, 'bad'), document.getElementById('dislikedInput'));
   });
   state.desired.forEach((t,i) => {
-    const chip = document.createElement('div');
-    chip.className = 'tag-chip';
-    chip.innerHTML = t + `<button onclick="removeTag('desired',${i})">×</button>`;
-    desw.insertBefore(chip, document.getElementById('desiredInput'));
+    desw.insertBefore(buildChip(t, 'desired', i, ''), document.getElementById('desiredInput'));
   });
 }
+
+// ====================================================
+// SINCRONIZA A UI DO FORMULÁRIO COM O ESTADO RESTAURADO
+// Usado ao carregar um plano salvo na nuvem: o objeto `state` já vem
+// certo (via Object.assign), mas os elementos visuais (cards, checkboxes,
+// chips, botões) não se atualizam sozinhos — precisam ser re-sincronizados
+// manualmente para o wizard não parecer que "esqueceu" as escolhas do usuário.
+// ====================================================
+window.syncFormUIFromState = function () {
+  // Sexo
+  const sexM = document.getElementById('sexM'), sexF = document.getElementById('sexF');
+  if (sexM && sexF) {
+    sexM.classList.toggle('selected', state.sex === 'male');
+    sexF.classList.toggle('selected', state.sex === 'female');
+  }
+
+  // Objetivo
+  document.querySelectorAll('.goal-card').forEach(c => {
+    c.classList.remove('selected');
+    const chk = c.querySelector('.gc-check');
+    if (chk) chk.style.display = 'none';
+  });
+  if (state.goal) {
+    const card = document.getElementById('goal-' + state.goal);
+    if (card) {
+      card.classList.add('selected');
+      const chk = card.querySelector('.gc-check');
+      if (chk) chk.style.display = 'flex';
+    }
+  }
+
+  // Refeições por dia
+  [3, 4, 5, 6].forEach(i => {
+    const el = document.getElementById('m' + i);
+    if (el) el.classList.toggle('selected', i === state.meals);
+  });
+
+  // Nível de atividade base
+  const activityBaseEl = document.getElementById('activityBase');
+  if (activityBaseEl) {
+    document.querySelectorAll('.activity-btn').forEach(b => b.classList.remove('selected'));
+    const activeBtn = document.getElementById('act-' + activityBaseEl.value);
+    if (activeBtn) activeBtn.classList.add('selected');
+  }
+
+  // Dias de treino (seletor 1-7) e duração — os campos ocultos já vêm certos via
+  // restoreFormFields, mas os botões/labels visuais precisam ser re-sincronizados
+  if (typeof setDaysCount === 'function') {
+    const liftDaysEl = document.getElementById('liftDays');
+    const runDaysEl = document.getElementById('runDays');
+    if (liftDaysEl) setDaysCount('lift', parseInt(liftDaysEl.value) || 3);
+    if (runDaysEl) setDaysCount('run', parseInt(runDaysEl.value) || 3);
+  }
+  if (typeof _renderDuration === 'function') {
+    _renderDuration('lift');
+  }
+
+  // Musculação / Corrida — abre ou fecha o painel conforme estava salvo
+  ['lifting', 'running'].forEach(type => {
+    const body = document.getElementById('body-' + type);
+    const toggle = document.getElementById('toggle-' + type);
+    const isOn = type === 'lifting' ? state.liftingOn : state.runningOn;
+    if (body) body.classList.toggle('open', !!isOn);
+    if (toggle) toggle.classList.toggle('on', !!isOn);
+  });
+
+  // Nível de suor
+  ['low', 'moderate', 'heavy'].forEach(level => {
+    const el = document.getElementById('sweat-' + level);
+    if (el) el.classList.toggle('selected', state.sweatLevel === level);
+  });
+
+  // Restrições: lactose, glúten, vegetariano, vegano, suor salgado
+  ['lactose', 'gluten', 'vegetarian', 'vegan', 'salty'].forEach(k => {
+    const el = document.getElementById('chk-' + k);
+    const cb = document.getElementById('cb-' + k);
+    if (el) el.classList.toggle('checked', !!state.checks[k]);
+    if (cb) cb.textContent = state.checks[k] ? '✓' : '';
+  });
+
+  // Prova (distância)
+  document.querySelectorAll('.race-btn').forEach(b => b.classList.remove('selected'));
+  const raceDateWrap = document.getElementById('raceDateWrap');
+  if (state.raceDistance) {
+    const el = document.getElementById('race-' + state.raceDistance);
+    if (el) el.classList.add('selected');
+    if (raceDateWrap) raceDateWrap.style.display = 'block';
+  } else {
+    const noneBtn = document.getElementById('race-none');
+    if (noneBtn) noneBtn.classList.add('selected');
+    if (raceDateWrap) raceDateWrap.style.display = 'none';
+  }
+
+  // Chips de preferência alimentar (gerais e avançadas por refeição)
+  document.querySelectorAll('.pref-chip').forEach(chip => {
+    const group = chip.dataset.group;
+    const food = chip.dataset.food;
+    if (!group) return;
+    const isAdv = group.startsWith('adv-');
+    const store = isAdv ? state.advFoodPrefs : state.foodPrefs;
+    const arr = (store && store[group]) || [];
+    const isSelected = arr.includes(food);
+    chip.classList.toggle('selected', isSelected);
+    const limit = PREF_LIMITS[group] || 3;
+    chip.classList.toggle('disabled', !isSelected && arr.length >= limit);
+  });
+
+  // Tags livres: "não gosta" / "gosta"
+  if (typeof renderTags === 'function') renderTags();
+};
 
 // ====================================================
 // CALCULATOR ENGINE
@@ -3251,13 +3455,39 @@ function calculate() {
   const protG = Math.round(protRate * weight);
   const protKcal = protG * 4;
 
-  // ---- Fat ----
-  const fatKcal = Math.round(target * 0.25);
-  const fatG = Math.round(fatKcal / 9);
+  // ---- Carbs & Fat ----
+  // Para quem corre, o carboidrato é dimensionado primeiro pelo volume de treino
+  // (g/kg de peso, igual à faixa usada na validação abaixo) — e não como "o que sobrar"
+  // depois de uma gordura fixa em 25%. Isso evita que um híbrido massa+corrida (ou
+  // performance em corrida) fique sistematicamente abaixo do carboidrato que o volume
+  // de treino exige. A gordura tem um piso de segurança (nunca abaixo de ~20% das
+  // calorias nem de 0.6g/kg) para preservar função hormonal.
+  let fatKcal, fatG, carbKcal, carbG;
+  if (state.runningOn && runKm > 0) {
+    let idealCarbPerKg;
+    if (runKm < 15) idealCarbPerKg = 3.5;
+    else if (runKm < 30) idealCarbPerKg = 4.5;
+    else if (runKm < 50) idealCarbPerKg = 5.5;
+    else if (runKm < 80) idealCarbPerKg = 7;
+    else idealCarbPerKg = 9;
+    const idealCarbKcal = Math.round(idealCarbPerKg * weight) * 4;
+    const minFatKcal = Math.max(target * 0.20, weight * 0.6 * 9);
 
-  // ---- Carbs ----
-  const carbKcal = Math.max(0, target - protKcal - fatKcal);
-  const carbG = Math.round(carbKcal / 4);
+    if (protKcal + idealCarbKcal + minFatKcal <= target) {
+      // Cabe tudo: carboidrato pleno pro volume de treino + gordura no piso ou mais (o que sobrar)
+      carbKcal = idealCarbKcal;
+      fatKcal = Math.max(minFatKcal, target - protKcal - carbKcal);
+    } else {
+      // Não cabe: prioriza ainda assim o carboidrato do treino, aceitando gordura no piso mínimo
+      fatKcal = minFatKcal;
+      carbKcal = Math.max(0, target - protKcal - fatKcal);
+    }
+  } else {
+    fatKcal = Math.round(target * 0.25);
+    carbKcal = Math.max(0, target - protKcal - fatKcal);
+  }
+  fatG = Math.round(fatKcal / 9);
+  carbG = Math.round(carbKcal / 4);
 
   // ---- Carb validation by km ----
   let carbWarning = null;
@@ -3293,7 +3523,12 @@ function calculate() {
   let paceMinPerKm = 6;
   if (pace && pace.includes(':')) {
     const parts = pace.split(':');
-    paceMinPerKm = parseInt(parts[0]) + (parseInt(parts[1]) || 0) / 60;
+    const parsedMin = parseInt(parts[0], 10);
+    const parsedSec = parseInt(parts[1], 10);
+    const candidate = (isNaN(parsedMin) ? 0 : parsedMin) + (isNaN(parsedSec) ? 0 : parsedSec) / 60;
+    // Só usa o valor digitado se ele resultar num ritmo plausível (evita NaN/0 se o
+    // usuário digitar algo inválido, o que poluiria toda a conta de hidratação com NaN)
+    if (candidate > 0 && candidate < 60) paceMinPerKm = candidate;
   }
   const runHoursPerWeek = state.runningOn ? (runKm * paceMinPerKm / 60) : 0;
   const waterRunningWeekly = runHoursPerWeek * runMlPerHour;
@@ -3391,7 +3626,8 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
   const isVegan = state.checks.vegan;
   const isVegetarian = state.checks.vegetarian;
   const noLactose = state.checks.lactose;
-  
+  const noGluten = state.checks.gluten;
+
   // Cap de proteína dinâmico: refeições pequenas não devem exceder 40% da proteína diária
   // Isso evita porções absurdas mas respeita metas calóricas altas
   const SMALL_MEALS = new Set(['Café da Manhã','Lanche Manhã','Lanche da Tarde','Pré-Treino','Jantar/Ceia']);
@@ -3408,7 +3644,7 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
     const mFatG = Math.round(fatG * m.pct);
     const mCarbG = Math.round(carbG * m.pct);
     // Build food items for this meal — use PLAN_TEMPLATES if a variation is active
-    const items = buildMealFoodItems(m.name, cal, mProtG, mCarbG, mFatG, isVegan, isVegetarian, noLactose, state.disliked, planVariation, dayIdx);
+    const items = buildMealFoodItems(m.name, cal, mProtG, mCarbG, mFatG, isVegan, isVegetarian, noLactose, noGluten, state.disliked, state.desired, planVariation, dayIdx);
     return {
       ...m,
       calories: cal,
@@ -3495,7 +3731,13 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
   }
 
   // Validate & rebalance
-  let validation = validateAndRebalanceMeals(rawMeals, protG, carbG, fatG);
+  let validation = validateAndRebalanceMeals(rawMeals, protG, carbG, fatG, {
+    isVegan, isVegetarian, noLactose, noGluten,
+    isDisliked: (fname) => {
+      const n = fname.toLowerCase();
+      return (state.disliked || []).map(d => d.toLowerCase()).some(d => n.includes(d) || d.includes(n.split(' ')[0]));
+    },
+  });
 
   // -------------------------------------------------------
   // RECONCILIAÇÃO FINAL DE CALORIAS
@@ -3530,7 +3772,8 @@ function buildMeals(n, target, goal, hasLifting, hasRunning, protG, carbG, fatG,
         const newItems = m.foodItems.map(fi => {
           const fd = BR_FOODS[fi.name];
           if (!fd || !flexRoles.has(fd.role) || lockedFoods.has(fi.name)) return fi;
-          let newG = Math.max(5, Math.round(fi.g * calScale));
+          const itemScale = VOLUME_SENSITIVE_FOODS.has(fi.name) ? Math.min(calScale, 1.3) : calScale;
+          let newG = Math.max(5, Math.round(fi.g * itemScale));
           const foodMaxG = FOOD_MAX_G[fi.name];
           if (foodMaxG && newG > foodMaxG) newG = foodMaxG;
           if (newG > 400) newG = 400;
@@ -3587,17 +3830,17 @@ const BR_FOODS = {
   'Maçã':                         { cal:52,  p:0.3, c:14,  g:0.2, unit:'1 unidade média (130g)',    role:'fruit' },
   'Manga':                        { cal:60,  p:0.8, c:15,  g:0.4, unit:'fatia média (120g)',        role:'fruit' },
   'Laranja':                      { cal:47,  p:0.9, c:12,  g:0.1, unit:'1 unidade média (130g)',    role:'fruit' },
-  'Aveia em flocos':              { cal:389, p:17,  c:66,  g:7,   unit:'3 col sopa (30g)',          role:'carb' },
+  'Aveia em flocos':              { cal:389, p:17,  c:66,  g:7,   unit:'3 col sopa (30g)',          role:'carb', glutenFree:false },  // aveia comum no BR tem risco de contaminação cruzada com glúten
   'Mandioca cozida':              { cal:125, p:1,   c:30,  g:0.3, unit:'pedaço (120g)',             role:'carb' },
   'Batata-doce cozida':           { cal:86,  p:1.6, c:20,  g:0.1, unit:'1 unidade média (130g)',   role:'carb' },
-  'Pão francês':                  { cal:300, p:9,   c:58,  g:3,   unit:'1 unidade (50g)',           role:'carb' },
-  'Pão integral':                 { cal:247, p:9,   c:45,  g:3.4, unit:'2 fatias (60g)',            role:'carb' },
-  'Pão de forma':                 { cal:253, p:12,  c:44.1,g:2.7, unit:'2 fatias (50g)',            role:'carb' },  // TACO: pão de forma (branco)
+  'Pão francês':                  { cal:300, p:9,   c:58,  g:3,   unit:'1 unidade (50g)',           role:'carb', glutenFree:false },
+  'Pão integral':                 { cal:247, p:9,   c:45,  g:3.4, unit:'2 fatias (60g)',            role:'carb', glutenFree:false },
+  'Pão de forma':                 { cal:253, p:12,  c:44.1,g:2.7, unit:'2 fatias (50g)',            role:'carb', glutenFree:false },  // TACO: pão de forma (branco)
   'Tapioca':                      { cal:358, p:0.2, c:88,  g:0.2, unit:'2 col sopa farinha (30g)', role:'carb' },
-  'Whey protein':                 { cal:380, p:75,  c:7,   g:5,   unit:'1 scoop (30g)',             role:'prot', vegan:false },
-  'Iogurte grego integral':       { cal:97,  p:9,   c:3.6, g:5,   unit:'pote individual (170g)',   role:'prot', vegan:false },
-  'Queijo cottage':               { cal:103, p:11,  c:3.4, g:4.3, unit:'4 col sopa (100g)',        role:'prot', vegan:false },
-  'Queijo minas frescal':         { cal:264, p:17,  c:3.2, g:20,  unit:'fatia média (40g)',        role:'prot', vegan:false },
+  'Whey protein':                 { cal:380, p:75,  c:7,   g:5,   unit:'1 scoop (30g)',             role:'prot', vegan:false, lactoseFree:false },  // whey concentrado — recomendar isolado se restrito
+  'Iogurte grego integral':       { cal:97,  p:9,   c:3.6, g:5,   unit:'pote individual (170g)',   role:'prot', vegan:false, lactoseFree:false },
+  'Queijo cottage':               { cal:103, p:11,  c:3.4, g:4.3, unit:'4 col sopa (100g)',        role:'prot', vegan:false, lactoseFree:false },
+  'Queijo minas frescal':         { cal:264, p:17,  c:3.2, g:20,  unit:'fatia média (40g)',        role:'prot', vegan:false, lactoseFree:false },
   'Azeite de oliva':              { cal:884, p:0,   c:0,   g:100, unit:'1 col sopa (10ml)',        role:'fat'  },
   'Amendoim torrado':             { cal:567, p:26,  c:16,  g:49,  unit:'1 col sopa (20g)',         role:'fat'  },
   'Pasta de amendoim':            { cal:598, p:25,  c:20,  g:50,  unit:'1 col sopa (30g)',         role:'fat'  },
@@ -3608,8 +3851,8 @@ const BR_FOODS = {
   'Lentilha cozida':              { cal:116, p:9,   c:20,  g:0.4, unit:'concha (80g)',             role:'prot', vegan:true  },
   'Tofu':                         { cal:76,  p:8,   c:1.9, g:4.8, unit:'fatia grossa (100g)',      role:'prot', vegan:true  },
   'Grão-de-bico cozido':          { cal:164, p:8.9, c:27,  g:2.6, unit:'concha (80g)',             role:'prot', vegan:true  },
-  'Requeijão cremoso':            { cal:240, p:8,   c:3.2, g:22,  unit:'2 col sopa (40g)',         role:'prot', vegan:false },
-  'Mussarela':                    { cal:280, p:22,  c:2.2, g:20,  unit:'2 fatias (40g)',            role:'prot', vegan:false },
+  'Requeijão cremoso':            { cal:240, p:8,   c:3.2, g:22,  unit:'2 col sopa (40g)',         role:'prot', vegan:false, lactoseFree:false },
+  'Mussarela':                    { cal:280, p:22,  c:2.2, g:20,  unit:'2 fatias (40g)',            role:'prot', vegan:false, lactoseFree:false },
 
   // ── PROTEÍNAS extras ─────────────────────────────────────────────────────
   // Fonte: TACO/UNICAMP (tabelatacoonline.com.br) e TBCA/USP
@@ -3623,21 +3866,21 @@ const BR_FOODS = {
   'Tempeh':                       { cal:193, p:19,  c:9,   g:11,  unit:'fatia (80g)',               role:'prot', vegan:true  },  // USDA (não consta TACO)
   'Edamame cozido':               { cal:122, p:11,  c:10,  g:5,   unit:'xícara (120g)',             role:'prot', vegan:true  },  // USDA
   'Feijão preto cozido':          { cal:132, p:8.9, c:23.7,g:0.5, unit:'concha (80g)',              role:'prot', vegan:true  },  // TACO: feijão preto cozido
-  'Iogurte natural':              { cal:51,  p:4.1, c:1.9, g:3.0, unit:'pote (170g)',               role:'prot', vegan:false },  // TACO: iogurte natural
-  'Queijo minas padrão':          { cal:264, p:18,  c:3,   g:20,  unit:'fatia média (40g)',         role:'prot', vegan:false },  // TACO
-  'Ricota':                       { cal:134, p:11,  c:3.2, g:8,   unit:'3 col sopa (60g)',          role:'prot', vegan:false },  // TACO
+  'Iogurte natural':              { cal:51,  p:4.1, c:1.9, g:3.0, unit:'pote (170g)',               role:'prot', vegan:false, lactoseFree:false },  // TACO: iogurte natural
+  'Queijo minas padrão':          { cal:264, p:18,  c:3,   g:20,  unit:'fatia média (40g)',         role:'prot', vegan:false, lactoseFree:false },  // TACO
+  'Ricota':                       { cal:134, p:11,  c:3.2, g:8,   unit:'3 col sopa (60g)',          role:'prot', vegan:false, lactoseFree:false },  // TACO
 
   // ── CARBOIDRATOS extras ───────────────────────────────────────────────────
   'Batata inglesa cozida':        { cal:64,  p:1.8, c:14.7,g:0.1, unit:'unidade média (130g)',      role:'carb' },  // TACO: batata inglesa crua (cozida similar)
   'Inhame cozido':                { cal:97,  p:2.1, c:23.2,g:0.2, unit:'pedaço (120g)',             role:'carb' },  // TACO: inhame cru
-  'Macarrão integral cozido':     { cal:124, p:5,   c:25,  g:1,   unit:'xícara (100g)',             role:'carb' },  // TACO
-  'Macarrão branco cozido':       { cal:131, p:4.5, c:27,  g:0.9, unit:'xícara (100g)',             role:'carb' },  // TACO
+  'Macarrão integral cozido':     { cal:124, p:5,   c:25,  g:1,   unit:'xícara (100g)',             role:'carb', glutenFree:false },  // TACO
+  'Macarrão branco cozido':       { cal:131, p:4.5, c:27,  g:0.9, unit:'xícara (100g)',             role:'carb', glutenFree:false },  // TACO
   'Quinoa cozida':                { cal:120, p:4.4, c:22,  g:1.9, unit:'xícara (100g)',             role:'carb', vegan:true  },  // USDA (não consta TACO)
   'Cuscuz de milho cozido':       { cal:113, p:2.2, c:25.3,g:0.7, unit:'porção (100g)',             role:'carb' },  // TACO: cuscuz de milho cozido com sal
-  'Pão de queijo':                { cal:280, p:5.5, c:37,  g:12,  unit:'2 unidades (60g)',          role:'carb', vegan:false },  // estimativa — não consta TACO
+  'Pão de queijo':                { cal:280, p:5.5, c:37,  g:12,  unit:'2 unidades (60g)',          role:'carb', vegan:false, lactoseFree:false },  // leva queijo/leite — estimativa, não consta TACO
   'Arroz vermelho cozido':        { cal:128, p:2.8, c:27,  g:1.2, unit:'colher de servir (90g)',    role:'carb' },  // TACO (proxy arroz integral)
-  'Granola sem açúcar':           { cal:380, p:10,  c:59,  g:14,  unit:'3 col sopa (40g)',          role:'carb' },  // estimativa — não consta TACO
-  'Aveia em flocos finos':        { cal:389, p:17,  c:66,  g:7,   unit:'3 col sopa (30g)',          role:'carb' },  // TACO: aveia em flocos
+  'Granola sem açúcar':           { cal:380, p:10,  c:59,  g:14,  unit:'3 col sopa (40g)',          role:'carb', glutenFree:false },  // costuma levar aveia/trigo — estimativa, não consta TACO
+  'Aveia em flocos finos':        { cal:389, p:17,  c:66,  g:7,   unit:'3 col sopa (30g)',          role:'carb', glutenFree:false },  // TACO: aveia em flocos
   'Ervilha cozida':               { cal:93,  p:6.4, c:16,  g:0.4, unit:'concha (80g)',              role:'carb', vegan:true  },  // TACO
   'Milho cozido':                 { cal:86,  p:3.2, c:19,  g:1.2, unit:'espiga pequena (100g)',     role:'carb', vegan:true  },  // TACO
 
@@ -3658,6 +3901,48 @@ const BR_FOODS = {
   'Pera':                         { cal:62,  p:0.4, c:15,  g:0.1, unit:'1 unidade média (130g)',    role:'fruit' },  // TACO: pera crua
   'Pêssego':                      { cal:36,  p:0.8, c:9.3, g:0.1, unit:'1 unidade média (120g)',    role:'fruit' },  // TACO: pêssego Aurora cru
 };
+
+// Alimentos com carne/peixe (usados para o filtro "vegetariano" — vegetarianos comem
+// ovo/laticínios, mas não carne/peixe). Mantido como um conjunto único e completo para
+// não ficar defasado quando novos alimentos forem adicionados ao banco.
+const MEAT_FISH_FOODS = new Set([
+  'Peito de frango grelhado','Carne bovina magra grelhada','Tilápia grelhada','Atum em lata',
+  'Salmão grelhado','Sardinha frita','Frango cozido desfiado','Carne moída cozida',
+  'Peru grelhado','Atum fresco cru',
+]);
+
+// Checagem central de restrições — usada tanto na geração automática (buildMealFoodItems)
+// quanto no rebalanceamento de macros (validateAndRebalanceMeals), para garantir que
+// nenhuma etapa do algoritmo reintroduza um alimento fora das restrições do usuário.
+function foodViolatesRestrictions(fname, restrictions) {
+  const fd = BR_FOODS[fname];
+  if (!fd) return true;
+  const r = restrictions || {};
+  if (r.isVegan && fd.vegan === false) return true;
+  if (r.isVegetarian && MEAT_FISH_FOODS.has(fname)) return true;
+  if (r.noLactose && fd.lactoseFree === false) return true;
+  if (r.noGluten && fd.glutenFree === false) return true;
+  if (r.isDisliked && r.isDisliked(fname)) return true;
+  return false;
+}
+
+// Monta o objeto de restrições a partir do `state` atual (checkboxes + "não gosta"),
+// para uso em qualquer busca/lista de alimentos interativa da UI (busca de substituição,
+// "+ Adicionar alimento", builder manual) — garante que elas nunca ofereçam algo que o
+// próprio gerador automático do plano não ofereceria.
+function getCurrentRestrictions() {
+  const dislikedLower = (state.disliked || []).map(d => d.toLowerCase());
+  return {
+    isVegan: state.checks.vegan,
+    isVegetarian: state.checks.vegetarian,
+    noLactose: state.checks.lactose,
+    noGluten: state.checks.gluten,
+    isDisliked: (fname) => {
+      const n = fname.toLowerCase();
+      return dislikedLower.some(d => n.includes(d) || d.includes(n.split(' ')[0]));
+    },
+  };
+}
 
 // ====================================================
 // LIMITES PRÁTICOS POR ALIMENTO (em gramas)
@@ -3680,7 +3965,7 @@ const FOOD_MAX_G = {
   'Tilápia grelhada':             240,  // 2 filés médios
   'Atum em lata':                 160,  // 2 latas × 80g
   'Iogurte grego integral':       340,  // 2 potes
-  'Aveia em flocos':               90,  // 3 col sopa × 30g (max 9 col)
+  'Aveia em flocos':               40,  // máx 4 col sopa por refeição (pedido: nunca mais que isso numa refeição só)
   'Arroz branco cozido':          360,  // 4 colheres de servir
   'Arroz integral cozido':        360,
   'Batata-doce cozida':           390,  // 3 unidades médias
@@ -3721,8 +4006,8 @@ const FOOD_MAX_G = {
   'Cuscuz de milho cozido':       200,
   'Pão de queijo':                180,
   'Arroz vermelho cozido':        360,
-  'Granola sem açúcar':           120,
-  'Aveia em flocos finos':         90,
+  'Granola sem açúcar':            60,  // porção realista de granola numa única refeição
+  'Aveia em flocos finos':         40,  // máx 4 col sopa por refeição
   'Ervilha cozida':               200,
   'Milho cozido':                 200,
   'Óleo de coco':                  30,
@@ -3739,6 +4024,14 @@ const FOOD_MAX_G = {
   'Pera':                         260,
   'Pêssego':                      360,
 };
+
+// Farináceos secos/densos: mesmo dentro do FOOD_MAX_G, não devem ser escalados
+// agressivamente durante o rebalanceamento de macros (evita, por ex., aveia
+// virar 8 colheres de sopa numa refeição só só porque faltava carboidrato no dia).
+const VOLUME_SENSITIVE_FOODS = new Set([
+  'Aveia em flocos', 'Aveia em flocos finos', 'Granola sem açúcar',
+  'Pão francês', 'Pão integral', 'Pão de forma', 'Pão de queijo', 'Tapioca',
+]);
 
 // Pools de redistribuição por role quando o alimento principal atinge o limite
 const OVERFLOW_POOL_CARB_BREAKFAST = ['Aveia em flocos','Tapioca','Pão integral','Pão francês','Batata-doce cozida','Mandioca cozida'];
@@ -3806,6 +4099,13 @@ const CARB_ROTATION_BREAKFAST = [
 function formatQtd(foodName, grams) {
   const fd = BR_FOODS[foodName];
   if (!fd) return `${grams}g`;
+
+  // Azeite/óleos: escolhe a colher mais natural (chá/sobremesa/sopa) pela quantidade,
+  // em vez de sempre expressar em frações de colher de sopa (ex: "0.4 col sopa")
+  const unitCfgForFood = FOOD_UNIT_CONFIG[foodName];
+  if (unitCfgForFood && unitCfgForFood.type === 'oil') {
+    return formatOilSpoon(grams, unitCfgForFood);
+  }
 
   // Extrai base em gramas da unit string: "2 ovos (90g)" ou "unidade (60g)" → baseG
   const matchFull = fd.unit.match(/\((\d+)g\)/);
@@ -3994,13 +4294,38 @@ function calcEquivalentPortion(origFoodName, origPortion, subFoodName) {
   };
 }
 
-function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetFat, isVegan, isVegetarian, noLactose, disliked, planVariation, dayIdx) {
+/**
+ * Resolve os textos livres digitados em "Alimentos que gosta" (state.desired) para
+ * nomes reais do banco BR_FOODS, usando correspondência por substring (igual isDisliked).
+ * Antes esse campo só influenciava a lista cosmética de sugestões — nunca a montagem
+ * real do plano. Agora os alimentos encontrados entram como preferência extra.
+ */
+function resolveDesiredFoods(desired) {
+  if (!desired || !desired.length) return [];
+  const foodNames = Object.keys(BR_FOODS);
+  const matches = [];
+  desired.forEach(tok => {
+    const nTok = normalizeSearchStr(tok);
+    if (!nTok) return;
+    const found = foodNames.find(fn => {
+      const nFn = normalizeSearchStr(fn);
+      return nFn.includes(nTok) || nTok.includes(nFn);
+    });
+    if (found && !matches.includes(found)) matches.push(found);
+  });
+  return matches;
+}
+
+function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetFat, isVegan, isVegetarian, noLactose, noGluten, disliked, desired, planVariation, dayIdx) {
   const dislikedLower = disliked.map(d => d.toLowerCase());
 
   function isDisliked(fname) {
     const n = fname.toLowerCase();
     return dislikedLower.some(d => n.includes(d) || d.includes(n.split(' ')[0]));
   }
+
+  const restrictions = { isVegan, isVegetarian, noLactose, noGluten, isDisliked };
+  function isAllowed(fname) { return !foodViolatesRestrictions(fname, restrictions); }
 
   // ---- Resolve preferências do usuário para esta refeição ----
   // Mapeamento de mealName → chaves de preferência
@@ -4017,24 +4342,24 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
   };
   const prefKeys = MEAL_TO_PREF_KEY[mealName] || {};
   const advPrefs = (prefKeys.adv && state.advFoodPrefs[prefKeys.adv]) || [];
+  const desiredFoods = resolveDesiredFoods(desired);
+  const desiredByRole = (role) => desiredFoods.filter(f => BR_FOODS[f] && BR_FOODS[f].role === role);
   // Se há preferências avançadas para esta refeição, usam-se elas diretamente
-  // Caso contrário, combinar preferências gerais por role
-  const prefProt  = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.prot] || [])]);
-  const prefCarb  = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.carb] || [])]);
-  const prefFruit = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.fruit] || [])]);
-  const prefSnack = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.snack] || [])]);
+  // Caso contrário, combinar preferências gerais por role + alimentos desejados (texto livre)
+  const prefProt  = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.prot] || []), ...desiredByRole('prot')]);
+  const prefCarb  = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.carb] || []), ...desiredByRole('carb')]);
+  const prefFruit = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.fruit] || []), ...desiredByRole('fruit')]);
+  const prefSnack = advPrefs.length > 0 ? advPrefs : ([...(state.foodPrefs[prefKeys.snack] || []), ...desiredFoods]);
 
   // Helper: retorna o primeiro alimento preferido de uma lista de preferências que é válido para o role
   function pickPreferred(prefList, role, exclude) {
     for (const food of prefList) {
       if (exclude && exclude.has(food)) continue;
-      if (isDisliked(food)) continue;
       if (!BR_FOODS[food]) continue;
       const fd = BR_FOODS[food];
       if (fd.role !== role && !(role === 'fruit' && fd.role === 'fruit')) continue;
-      // Verificar restrições
-      if (isVegan && fd.vegan === false) continue;
-      if (isVegetarian && ['Peito de frango grelhado','Carne bovina magra grelhada','Tilápia grelhada','Atum em lata'].includes(food)) continue;
+      // Verificar restrições (vegano, vegetariano, sem lactose, sem glúten, rejeitados)
+      if (!isAllowed(food)) continue;
       return food;
     }
     return null;
@@ -4063,8 +4388,7 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
 
   if (!tmpl && isVegan) tmpl = templates.find(t => t.vegan);
   if (!tmpl && isVegetarian) {
-    const meatFoods = ['Peito de frango grelhado','Carne bovina magra grelhada','Tilápia grelhada','Atum em lata'];
-    tmpl = templates.find(t => !t.nonVegan || t.nonVegan.every(f => !meatFoods.includes(f)));
+    tmpl = templates.find(t => !t.nonVegan || t.nonVegan.every(f => !MEAT_FISH_FOODS.has(f)));
   }
   // Sem restrições ou sem match: usar templates[0] diretamente (template padrão com proteína animal)
   if (!tmpl) tmpl = templates[0];
@@ -4278,7 +4602,7 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
 
   allFoods.forEach(({ name: fname, role }) => {
 
-    if (!isDisliked(fname)) {
+    if (isAllowed(fname)) {
       const fd = BR_FOODS[fname];
       if (!fd) return;
       let portion = basePortions[fname] || 100;
@@ -4317,7 +4641,7 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
       pool = [...prefFruit.filter(f => BR_FOODS[f] && BR_FOODS[f].role === 'fruit'), 'Banana','Mamão','Maçã'];
     }
 
-    const subName = pool.find(s => s !== fname && !isDisliked(s) && BR_FOODS[s] && !result.find(r => r.name === s));
+    const subName = pool.find(s => s !== fname && isAllowed(s) && BR_FOODS[s] && !result.find(r => r.name === s));
     if (!subName) return;
 
     // Usar porção realista do substituto (não espelhar porção do rejeitado)
@@ -4338,9 +4662,36 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
     });
   });
 
+  // ---- Combinação coerente: aveia nunca fica sozinha (ex: só com ovo) ----
+  // Sempre que aveia entra na refeição, garante que uma fruta também esteja presente
+  // (o preparo natural é aveia + fruta, ex: aveia com banana amassada, com mamão etc.)
+  let addedCoherenceFruit = false;
+  const hasOatsInResult = result.some(r => r.name === 'Aveia em flocos' || r.name === 'Aveia em flocos finos');
+  const hasFruitInResult = result.some(r => (BR_FOODS[r.name] || {}).role === 'fruit');
+  if (hasOatsInResult && !hasFruitInResult) {
+    const fruitPool = [...prefFruit.filter(f => BR_FOODS[f] && BR_FOODS[f].role === 'fruit'), 'Banana', 'Mamão', 'Maçã', 'Manga'];
+    const fruitPick = fruitPool.find(f => isAllowed(f) && BR_FOODS[f] && !result.find(r => r.name === f));
+    if (fruitPick) {
+      const ffd = BR_FOODS[fruitPick];
+      const fPortion = getRealisticPortion(fruitPick, 'fruit');
+      const fRatio = fPortion / 100;
+      result.push({
+        name: fruitPick, g: fPortion, unit: ffd.unit,
+        qtdLabel: formatQtd(fruitPick, fPortion),
+        cal: Math.round(ffd.cal * fRatio),
+        p:   Math.round(ffd.p * fRatio * 10) / 10,
+        c:   Math.round(ffd.c * fRatio * 10) / 10,
+        f:   Math.round(ffd.g * fRatio * 10) / 10,
+        role: 'fruit', wasLimited: false, isOverflow: false,
+      });
+      addedCoherenceFruit = true;
+    }
+  }
+
   // Lanches e pós-treino: máx 3 itens | Refeições principais: máx 5 itens
+  // (+1 se precisamos garantir a fruta que acompanha a aveia, pra não cortar ela no slice)
   const maxItems = (isSmallMeal || isSnack || isPostWorkout) ? 3 : 5;
-  return result.slice(0, maxItems);
+  return result.slice(0, addedCoherenceFruit ? maxItems + 1 : maxItems);
 }
 
 // ====================================================
@@ -4351,7 +4702,7 @@ function buildMealFoodItems(mealName, targetCal, targetProt, targetCarb, targetF
  * Se estiver fora, reescala proporcionalmente cada item de cada refeição.
  * Retorna { meals, adjustments, isValid }
  */
-function validateAndRebalanceMeals(meals, targetProt, targetCarb, targetFat) {
+function validateAndRebalanceMeals(meals, targetProt, targetCarb, targetFat, restrictions) {
   function sumMacro(meals, key) {
     return meals.reduce((s, m) => s + m.foodItems.reduce((ss, fi) => ss + (fi[key] || 0), 0), 0);
   }
@@ -4385,12 +4736,16 @@ function validateAndRebalanceMeals(meals, targetProt, targetCarb, targetFat) {
   // complementar no café da manhã (refeição mais flexível).
   // Prioridade: ricota, queijo cottage, iogurte grego, queijo minas,
   // iogurte natural — alimentos que combinam naturalmente no café.
+  // Filtrado pelas restrições do usuário (nunca oferece laticínio se
+  // sem lactose, nem nada que viole vegano/vegetariano/glúten/rejeitados).
   // -------------------------------------------------------
   const PROT_COMPLEMENTS_BREAKFAST = [
     'Ricota', 'Queijo cottage', 'Iogurte grego integral',
     'Queijo minas frescal', 'Iogurte natural', 'Queijo minas padrão',
-    'Requeijão cremoso', 'Whey protein',
-  ];
+    'Requeijão cremoso', 'Whey protein', 'Ovo cozido', 'Tofu', 'Grão-de-bico cozido',
+    'Proteína de ervilha', 'Lentilha cozida',
+  ].filter(f => !foodViolatesRestrictions(f, restrictions));
+
 
   let mealsAfterComplement = meals;
 
@@ -4481,7 +4836,10 @@ function validateAndRebalanceMeals(meals, targetProt, targetCarb, targetFat) {
       // Para refeições principais: não reduzir menos de 50% nem aumentar mais de 200%
       const isSmallFoodItem = ['Lanche Manhã','Lanche da Tarde','Pós-Treino','Pré-Treino','Pré/Pós-Treino'].includes(m.name);
       const clampMin = isSmallFoodItem ? 0.7 : 0.5;
-      const clampMax = isSmallFoodItem ? 1.4 : 2.0;
+      let clampMax = isSmallFoodItem ? 1.4 : 2.0;
+      // Farináceos secos/densos (aveia, granola, pão) não devem dobrar de porção — em
+      // volume isso vira algo pouco realista de comer numa só refeição (ex: 8 col. sopa de aveia)
+      if (VOLUME_SENSITIVE_FOODS.has(fi.name)) clampMax = Math.min(clampMax, 1.3);
       scale = Math.max(clampMin, Math.min(clampMax, scale));
       let newG = Math.max(5, Math.round(fi.g * scale));
       // Respeitar limites práticos por alimento também no rebalanceamento
@@ -4627,6 +4985,7 @@ function buildFoodSuggestions(checks, goal, disliked, desired) {
 // ====================================================
 function buildNotes(st, runKm, runLong, carbWarning, waterTotal, bf) {
   const notes = [];
+  if (carbWarning) notes.push(`⚠️ ${carbWarning}`);
   if (st.goal === 'lose_fat') notes.push('Déficit de 400 kcal aplicado. Pese-se semanalmente sempre no mesmo horário.');
   if (st.goal === 'gain_muscle') notes.push('Superávit limpo de 300 kcal. Priorize progressão de carga nos treinos.');
   if (st.goal === 'run_performance') notes.push('Priorize carboidratos 3–4h antes de corridas longas ou competições.');
@@ -4970,12 +5329,18 @@ function renderResult(r) {
   renderCalcDetails({
     bmr, tdee, target, adjust, protG, protKcal, carbG, carbKcal, fatG, fatKcal,
     waterTotal, waterBase, waterLifting, waterRunning, waterBaseRate, runMlPerHour,
-    liftHoursPerWeek, runHoursPerWeek, actFactor, bf, weight, height, age, protRate
+    liftHoursPerWeek, runHoursPerWeek, actFactor, bf, weight, height, age, protRate,
+    runningOn: state.runningOn,
+    runKm: state.runningOn ? (parseInt(document.getElementById('runKm').value) || 0) : 0,
   });
 
   // === NEW FEATURES ===
   // Plan Score
-  renderPlanScore({ protG, carbG, fatG, target, weight, meals: state.meals, protRate });
+  renderPlanScore({
+    protG, carbG, fatG, target, weight, meals: state.meals, protRate,
+    runningOn: state.runningOn,
+    runKm: state.runningOn ? (parseInt(document.getElementById('runKm').value) || 0) : 0,
+  });
 
   // Workout Timing
   renderWorkoutTiming({ hasLifting: params.hasLifting, hasRunning: params.hasRunning });
@@ -4983,8 +5348,19 @@ function renderResult(r) {
   // Weekly Varied Plan
   renderWeekPlan({ target, protG, carbG, fatG, meals: state.meals });
 
-  // Shopping List (uses today's meals as base × 7)
-  buildShoppingList(meals);
+  // Shopping List — em plano variado, soma as quantidades reais dos 7 dias (cada
+  // dia pode ter alimentos/porções diferentes por causa da periodização treino/descanso
+  // e da alternância A/B); em plano fixo, usa o dia base × 7.
+  if (useVariation && window._weekParams) {
+    const allDaysMeals = [];
+    for (let d = 0; d < 7; d++) {
+      const dayResult = getWeekVariation(d, selectedVariation, window._weekParams);
+      allDaysMeals.push(...dayResult.meals);
+    }
+    buildShoppingList(allDaysMeals, true);
+  } else {
+    buildShoppingList(meals);
+  }
 }
 
 // ====================================================
@@ -5117,6 +5493,7 @@ function exportPDF() {
       .bg-pattern, .progress-wrap, .nav-buttons, .action-row, .btn-recalc, .btn-save-cloud, .auth-widget, .header, .plan-totals-bar { display: none !important; }
       #step-1, #step-2, #step-3, #step-4, #step-5 { display: none !important; }
       #step-6 { display: block !important; }
+      #manualBuilderSection { display: none !important; }
       .app { padding: 0 !important; max-width: 100% !important; }
       .result-header h2 { font-size: 32px !important; -webkit-text-fill-color: #111 !important; background: none !important; color: #111 !important; }
       .result-header p, .header-badge { color: #555 !important; }
@@ -5154,11 +5531,46 @@ function exportPDF() {
       .divider { border-color: #ddd !important; }
       .legend-label { color: #333 !important; }
       .legend-val { color: #555 !important; }
+      /* Controles interativos não têm função no papel — some com eles no PDF */
+      .food-actions, .btn-add-food-auto, .btn-mb-add-food, .btn-export-shopping,
+      .week-tabs, .btn-sub-food { display: none !important; }
+      .shopping-item { cursor: default !important; }
     }
   `;
   document.head.appendChild(style);
+
+  // Plano variado: a tela só mostra 1 dia por vez (aba selecionada). Sem isso, o PDF saía
+  // com só esse 1 dos 7 dias do cardápio variado. Expande todos os dias temporariamente
+  // só para a impressão, e restaura a visualização normal (o dia que estava aberto) depois.
+  let restoreWeekView = null;
+  if (useVariation && window._weekParams) {
+    const container = document.getElementById('weekDayContent');
+    const originalHTML = container.innerHTML;
+    const savedDay = currentWeekDay;
+    let allDaysHTML = '';
+    for (let d = 0; d < 7; d++) {
+      const dayResult = getWeekVariation(d, selectedVariation, window._weekParams);
+      const badge = dayResult.isTrainingDay
+        ? `<span class="periodization-badge training">💪 Dia de Treino — +5% carb</span>`
+        : `<span class="periodization-badge rest">😴 Dia de Descanso — −10% carb</span>`;
+      allDaysHTML += `<div style="break-inside:avoid;margin-top:22px">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:1px;margin-bottom:8px;color:#111">${WEEKDAYS[d]}</div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;align-items:center">
+          ${badge}
+          <span style="font-size:12px;color:#555">Meta: <strong>${dayResult.dayTarget} kcal</strong> · P:${dayResult.dayProtG}g · C:${dayResult.dayCarbG}g · G:${dayResult.dayFatG}g</span>
+        </div>
+        ${dayResult.meals.map((m, mi) => renderMealCard(m, mi)).join('')}
+      </div>`;
+    }
+    container.innerHTML = allDaysHTML;
+    restoreWeekView = () => { container.innerHTML = originalHTML; showWeekDay(savedDay); };
+  }
+
   window.print();
-  setTimeout(() => { const s = document.getElementById('pdf-style'); if(s) s.remove(); }, 2000);
+  setTimeout(() => {
+    const s = document.getElementById('pdf-style'); if (s) s.remove();
+    if (restoreWeekView) restoreWeekView();
+  }, 2000);
 }
 
 function shareResults() {
@@ -5305,11 +5717,15 @@ function openSubFoodModal(mealIdx, foodIdx, foodName, role, context) {
 
   _subCtx = { mealIdx, foodIdx, foodName, role, context };
 
-  // Build candidate list from BR_FOODS same role
+  // Build candidate list from BR_FOODS same role — respeitando as restrições do usuário
+  // (vegano/vegetariano/sem lactose/sem glúten/rejeitados), do contrário a substituição
+  // manual poderia oferecer alimentos que o próprio plano nunca teria gerado sozinho.
+  const restrictions = getCurrentRestrictions();
   const effectiveRole = role === 'fruit' ? 'fruit' : role;
   const candidates = Object.entries(BR_FOODS)
     .filter(([name, data]) => {
       if (name === foodName) return false;
+      if (foodViolatesRestrictions(name, restrictions)) return false;
       const r = data.role || 'carb';
       if (effectiveRole === 'fruit') return r === 'fruit';
       if (effectiveRole === 'prot') return r === 'prot';
@@ -5343,8 +5759,11 @@ function filterSubFoodList(query) {
     renderSubFoodCandidates(_subFoodAllCandidates);
     return;
   }
-  // Quando há busca, pesquisa em todos os alimentos do banco (não só mesmo role)
-  const allCandidates = Object.entries(BR_FOODS).filter(([name]) => name !== (_subCtx && _subCtx.foodName));
+  // Quando há busca, pesquisa em todos os alimentos do banco (não só mesmo role),
+  // mas ainda respeitando as restrições do usuário.
+  const restrictions = getCurrentRestrictions();
+  const allCandidates = Object.entries(BR_FOODS).filter(([name]) =>
+    name !== (_subCtx && _subCtx.foodName) && !foodViolatesRestrictions(name, restrictions));
   const filtered = allCandidates.filter(([name]) => normalizeSearchStr(name).includes(q));
   renderSubFoodCandidates(filtered);
 }
@@ -5439,7 +5858,8 @@ function showAddFoodCat(role, tabEl) {
   }
   const icon = ROLE_ICONS[role] || '🍽️';
   const roleLabel = ROLE_LABELS[role] || role;
-  const items = ALL_FOODS_LIST.filter(f => f.role === role);
+  const restrictions = getCurrentRestrictions();
+  const items = ALL_FOODS_LIST.filter(f => f.role === role && !foodViolatesRestrictions(f.name, restrictions));
   const listEl = document.getElementById('addFoodCatList');
   listEl.innerHTML = items.map(f => {
     return `<div class="food-search-item" style="cursor:pointer" onclick="applyAddFoodToMeal('${f.name.replace(/'/g,"\\'")}')">
@@ -5459,12 +5879,13 @@ function searchAddFood(query) {
   const q = normalizeSearchStr(query);
   const dropdown = document.getElementById('addFoodDropdown');
   if (!q) { dropdown.classList.remove('open'); dropdown.innerHTML = ''; return; }
+  const restrictions = getCurrentRestrictions();
   const results = ALL_FOODS_LIST
-    .filter(f => normalizeSearchStr(f.name).includes(q))
+    .filter(f => normalizeSearchStr(f.name).includes(q) && !foodViolatesRestrictions(f.name, restrictions))
     .sort((a,b) => normalizeSearchStr(a.name).indexOf(q) - normalizeSearchStr(b.name).indexOf(q))
     .slice(0, 10);
   if (!results.length) {
-    dropdown.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text3)">Nenhum alimento encontrado</div>';
+    dropdown.innerHTML = '<div style="padding:12px 14px;font-size:13px;color:var(--text3)">Nenhum alimento encontrado (ou fora das suas restrições)</div>';
     dropdown.classList.add('open');
     return;
   }
@@ -5948,6 +6369,25 @@ function getSaladSuggestion(mealName) {
     </div>`;
 }
 
+// ====================================================
+// DICAS DE COMBINAÇÃO / PREPARO
+// ====================================================
+function getPairingTip(foodItems) {
+  if (!foodItems || !foodItems.length) return '';
+  const names = foodItems.map(fi => fi.name);
+  const hasOats = names.includes('Aveia em flocos') || names.includes('Aveia em flocos finos');
+  if (hasOats && names.includes('Banana')) {
+    return `<div class="salad-suggestion"><div class="salad-suggestion-icon">🥣</div><div class="salad-suggestion-text">Dica de preparo: amasse a banana e misture com a aveia — fica cremoso e ajuda a adoçar sem precisar de açúcar.</div></div>`;
+  }
+  if (hasOats && names.includes('Mamão')) {
+    return `<div class="salad-suggestion"><div class="salad-suggestion-icon">🥣</div><div class="salad-suggestion-text">Dica de preparo: pique o mamão e misture com a aveia, ou bata os dois no liquidificador com um pouco de água ou leite.</div></div>`;
+  }
+  if (hasOats && (names.includes('Maçã') || names.includes('Manga'))) {
+    return `<div class="salad-suggestion"><div class="salad-suggestion-icon">🥣</div><div class="salad-suggestion-text">Dica de preparo: pique a fruta em cubinhos e misture com a aveia — pode deixar de molho no líquido (leite/água) por alguns minutos para amolecer.</div></div>`;
+  }
+  return '';
+}
+
 function buildMealItemEl(m, mealIdx, context) {
   const div = document.createElement('div');
   div.className = 'meal-item';
@@ -6061,6 +6501,7 @@ function buildMealItemEl(m, mealIdx, context) {
         <div class="meal-macro-badge fat">🥑 ${totF}g gord</div>
       </div>
       ${deficitAlertHTML}
+      ${getPairingTip(m.foodItems)}
       ${getSaladSuggestion(m.name)}
     `;
   }
@@ -6091,7 +6532,7 @@ function buildMealItemEl(m, mealIdx, context) {
 // PLAN SCORE / SEMÁFORO
 // ====================================================
 function calcPlanScore(params) {
-  const { protG, carbG, fatG, target, weight, meals, protRate } = params;
+  const { protG, carbG, fatG, target, weight, meals, protRate, runningOn, runKm } = params;
   let score = 100;
   const items = [];
 
@@ -6104,9 +6545,14 @@ function calcPlanScore(params) {
     items.push({ ok: false, text: `Proteína ${protPerKg < 1.6 ? 'baixa' : 'muito alta'} (${protPerKg.toFixed(1)}g/kg)`, val: '!' });
   }
 
-  // Carb % check
+  // Carb % check — corredores de bom volume semanal precisam de mais carboidrato
+  // (já é assim no cálculo de macros); a faixa "ideal" acompanha isso pra não marcar
+  // como problema algo que é fisiologicamente correto pro volume de treino.
   const carbPct = (carbG * 4) / target * 100;
-  if (carbPct >= 40 && carbPct <= 60) {
+  let carbMaxIdeal = 60;
+  if (runningOn && runKm >= 50) carbMaxIdeal = 70;
+  else if (runningOn && runKm >= 30) carbMaxIdeal = 65;
+  if (carbPct >= 40 && carbPct <= carbMaxIdeal) {
     items.push({ ok: true, text: `Carboidratos equilibrados (${Math.round(carbPct)}% das calorias)`, val: '✓' });
   } else {
     score -= 10;
@@ -6178,6 +6624,22 @@ function renderWorkoutTiming(params) {
   card.style.display = 'block';
   let blocks = '';
 
+  // Sugestões respeitam as restrições marcadas (vegano/vegetariano/sem lactose/sem glúten) —
+  // antes eram fixas e podiam contradizer o resto do plano (ex: sugerir pão de trigo pra
+  // quem marcou intolerância a glúten).
+  const isVegan = state.checks.vegan;
+  const isVegetarian = state.checks.vegetarian;
+  const noLactose = state.checks.lactose;
+  const noGluten = state.checks.gluten;
+
+  const preLiftProt = isVegan ? 'Pequena porção de proteína vegetal (pasta de amendoim)' : 'Pequena porção de proteína (ovo)';
+  const postLiftProt1 = isVegan ? 'Tofu grelhado ou grão-de-bico' : isVegetarian ? 'Ovo cozido ou tofu grelhado' : 'Frango grelhado ou ovo cozido';
+  const postLiftProt2 = (isVegan || noLactose) ? 'Proteína vegetal ou whey isolado' : 'Proteína de rápida absorção (whey)';
+  const preRunCarb1 = noGluten ? 'Batata-doce ou tapioca com banana' : 'Pão integral com banana';
+  const preRunCarb2 = noGluten ? 'Tapioca com mel' : 'Aveia com mel';
+  const postRunProt1 = isVegan ? 'Tofu ou proteína vegetal + banana ou arroz' : 'Ovo cozido + banana ou arroz';
+  const postRunProt2 = (isVegan || noLactose) ? 'Bebida vegetal proteica ou whey isolado + fruta' : 'Iogurte grego + fruta';
+
   function timeOffset(hhmm, offsetMin) {
     if (!hhmm) return '';
     const [h, m] = hhmm.split(':').map(Number);
@@ -6199,7 +6661,7 @@ function renderWorkoutTiming(params) {
         </div>
         <div class="timing-food-item">Carboidrato de rápida absorção</div>
         <div class="timing-food-item">Banana ou tapioca com mel</div>
-        <div class="timing-food-item">Pequena porção de proteína (ovo)</div>
+        <div class="timing-food-item">${preLiftProt}</div>
         <div class="timing-food-item" style="color:var(--text3);font-style:italic;font-size:11px">Evite gordura em excesso</div>
       </div>
       <div class="timing-block">
@@ -6208,8 +6670,8 @@ function renderWorkoutTiming(params) {
           <div class="timing-block-label">Pós-Musculação</div>
           <div class="timing-block-time">~${post} (30min depois)</div>
         </div>
-        <div class="timing-food-item">Proteína de rápida absorção</div>
-        <div class="timing-food-item">Frango grelhado ou ovo cozido</div>
+        <div class="timing-food-item">${postLiftProt2}</div>
+        <div class="timing-food-item">${postLiftProt1}</div>
         <div class="timing-food-item">Carboidrato simples: arroz branco</div>
         <div class="timing-food-item">Banana para reposição de glicogênio</div>
       </div>`;
@@ -6226,8 +6688,8 @@ function renderWorkoutTiming(params) {
           <div class="timing-block-time">~${pre} (60min antes)</div>
         </div>
         <div class="timing-food-item">Carboidrato de digestão moderada</div>
-        <div class="timing-food-item">Pão integral com banana</div>
-        <div class="timing-food-item">Aveia com mel</div>
+        <div class="timing-food-item">${preRunCarb1}</div>
+        <div class="timing-food-item">${preRunCarb2}</div>
         <div class="timing-food-item" style="color:var(--text3);font-style:italic;font-size:11px">Evite fibras em excesso e gordura</div>
       </div>
       <div class="timing-block">
@@ -6238,8 +6700,8 @@ function renderWorkoutTiming(params) {
         </div>
         <div class="timing-food-item">Reidratação imediata (300–500ml)</div>
         <div class="timing-food-item">Proteína + carboidrato simples</div>
-        <div class="timing-food-item">Ovo cozido + banana ou arroz</div>
-        <div class="timing-food-item">Iogurte grego + fruta</div>
+        <div class="timing-food-item">${postRunProt1}</div>
+        <div class="timing-food-item">${postRunProt2}</div>
       </div>`;
   }
 
@@ -6253,7 +6715,7 @@ function renderWorkoutTiming(params) {
 // ====================================================
 // SHOPPING LIST
 // ====================================================
-function buildShoppingList(meals) {
+function buildShoppingList(meals, alreadyWeekly) {
   const quantities = {};
   meals.forEach(m => {
     (m.foodItems || []).forEach(fi => {
@@ -6270,22 +6732,19 @@ function buildShoppingList(meals) {
     '🧴 Laticínios': [],
   };
 
-  const protFoods = ['Peito de frango grelhado','Carne bovina magra grelhada','Tilápia grelhada','Atum em lata','Lentilha cozida','Tofu','Grão-de-bico cozido','Ovo cozido','Ovo mexido','Whey protein'];
-  const carbFoods = ['Arroz branco cozido','Arroz integral cozido','Feijão cozido','Aveia em flocos','Mandioca cozida','Batata-doce cozida','Pão francês','Pão integral','Tapioca'];
-  const fatFoods = ['Azeite de oliva','Amendoim torrado','Pasta de amendoim','Abacate','Castanha do Pará'];
-  const fruitFoods = ['Banana','Mamão','Maçã'];
-  const dairyFoods = ['Iogurte grego integral','Queijo cottage','Queijo minas frescal'];
-
+  // Categoriza pela role/tag real do banco de alimentos (BR_FOODS), em vez de listas
+  // manuais que ficavam desatualizadas toda vez que um alimento novo era adicionado.
   Object.entries(quantities).forEach(([name, info]) => {
-    const weeklyG = info.g * 7;
+    const weeklyG = alreadyWeekly ? info.g : info.g * 7;
     const unit = info.unit;
     const item = { name, weeklyG: Math.round(weeklyG), unit };
-    if (protFoods.includes(name)) cats['🥩 Proteínas'].push(item);
-    else if (carbFoods.includes(name)) cats['🌾 Carboidratos'].push(item);
-    else if (fatFoods.includes(name)) cats['🥑 Gorduras'].push(item);
-    else if (fruitFoods.includes(name)) cats['🍎 Frutas'].push(item);
-    else if (dairyFoods.includes(name)) cats['🧴 Laticínios'].push(item);
-    else cats['🌾 Carboidratos'].push(item);
+    const fd = BR_FOODS[name];
+    const role = fd ? fd.role : null;
+    if (role === 'prot' && fd.lactoseFree === false) cats['🧴 Laticínios'].push(item);
+    else if (role === 'prot') cats['🥩 Proteínas'].push(item);
+    else if (role === 'fat') cats['🥑 Gorduras'].push(item);
+    else if (role === 'fruit') cats['🍎 Frutas'].push(item);
+    else cats['🌾 Carboidratos'].push(item); // carb, ou alimento não reconhecido (fallback seguro)
   });
 
   const el = document.getElementById('shoppingCategories');
@@ -6312,34 +6771,17 @@ function buildShoppingList(meals) {
   window._shoppingData = cats;
 }
 
-// Converte gramas semanais em quantidade legível (unidades + gramas quando aplicável)
+// Converte gramas semanais em quantidade legível (unidades quando aplicável, senão gramas).
+// Reaproveita FOOD_UNIT_CONFIG (mesma fonte usada no resto do app) em vez de manter uma
+// segunda lista de unidades separada e sempre desatualizada.
 function formatShoppingQty(name, weeklyG) {
-  const SHOPPING_UNITS = {
-    'Ovo cozido':            { gpUnit: 60,  label: 'ovo',    labelP: 'ovos' },
-    'Ovo mexido':            { gpUnit: 60,  label: 'ovo',    labelP: 'ovos' },
-    'Banana':                { gpUnit: 100, label: 'unidade',labelP: 'unidades' },
-    'Maçã':                  { gpUnit: 130, label: 'unidade',labelP: 'unidades' },
-    'Laranja':               { gpUnit: 130, label: 'unidade',labelP: 'unidades' },
-    'Mamão':                 { gpUnit: 150, label: 'fatia',  labelP: 'fatias' },
-    'Manga':                 { gpUnit: 120, label: 'fatia',  labelP: 'fatias' },
-    'Kiwi':                  { gpUnit: 80,  label: 'unidade',labelP: 'unidades' },
-    'Pera':                  { gpUnit: 130, label: 'unidade',labelP: 'unidades' },
-    'Pão francês':           { gpUnit: 50,  label: 'unidade',labelP: 'unidades' },
-    'Pão integral':          { gpUnit: 25,  label: 'fatia',  labelP: 'fatias' },
-    'Pão de forma':          { gpUnit: 25,  label: 'fatia',  labelP: 'fatias' },
-    'Pão de queijo':         { gpUnit: 30,  label: 'unidade',labelP: 'unidades' },
-    'Batata-doce cozida':    { gpUnit: 130, label: 'unidade',labelP: 'unidades' },
-    'Iogurte grego integral':{ gpUnit: 170, label: 'pote',   labelP: 'potes' },
-    'Iogurte natural':       { gpUnit: 170, label: 'pote',   labelP: 'potes' },
-    'Atum em lata':          { gpUnit: 80,  label: 'lata',   labelP: 'latas' },
-    'Castanha do Pará':      { gpUnit: 5,   label: 'unidade',labelP: 'unidades' },
-  };
-  const cfg = SHOPPING_UNITS[name];
-  if (!cfg) return `${weeklyG}g/sem`;
-  const units = Math.round(weeklyG / cfg.gpUnit);
-  const label = units === 1 ? cfg.label : cfg.labelP;
-  // Para ovos e itens vendidos por unidade: mostrar unidades + gramas
-  return `${units} ${label}/sem (~${weeklyG}g)`;
+  const cfg = FOOD_UNIT_CONFIG[name];
+  if (cfg && cfg.type === 'count' && cfg.gramsPerUnit > 0) {
+    const units = Math.max(1, Math.round(weeklyG / cfg.gramsPerUnit));
+    const label = units === 1 ? cfg.unitLabel : cfg.unitLabelPlural;
+    return `${units} ${label}/sem (~${weeklyG}g)`;
+  }
+  return `${weeklyG}g/sem`;
 }
 
 function toggleShoppingItem(el) {
@@ -6646,6 +7088,8 @@ function renderMealCard(m, mealIdx) {
       <div class="meal-macro-badge carb">🌾 ${totC}g carb</div>
       <div class="meal-macro-badge fat">🥑 ${totF}g gord</div>
     </div>
+    ${getPairingTip(m.foodItems)}
+    ${getSaladSuggestion(m.name)}
     <div style="margin-top:10px">
       <button class="btn-add-food-auto" onclick="openAddFoodModal(${mi},'week')">+ Adicionar alimento</button>
     </div>
@@ -6839,8 +7283,9 @@ function searchFood(mealKey, query) {
   }
 
   // Filter foods — score: starts with > includes
+  const restrictions = getCurrentRestrictions();
   const results = ALL_FOODS_LIST
-    .filter(f => normalizeSearchStr(f.name).includes(q))
+    .filter(f => normalizeSearchStr(f.name).includes(q) && !foodViolatesRestrictions(f.name, restrictions))
     .sort((a, b) => {
       const ai = normalizeSearchStr(a.name).indexOf(q);
       const bi = normalizeSearchStr(b.name).indexOf(q);
@@ -6877,7 +7322,7 @@ function openDropdown(mealKey) {
 
 // Close all dropdowns on outside click
 document.addEventListener('click', function(e) {
-  if (!e.target.closest('.food-search-wrap') && !e.target.closest('#addFoodSearchWrap')) {
+  if (!e.target.closest('.food-search-wrap') && !e.target.closest('#addFoodSearchWrap') && !e.target.closest('.tags-input-wrap')) {
     document.querySelectorAll('.food-search-dropdown').forEach(d => d.classList.remove('open'));
     const addDd = document.getElementById('addFoodDropdown');
     if (addDd) addDd.classList.remove('open');
@@ -6931,8 +7376,8 @@ const FOOD_UNIT_CONFIG = {
   'Lentilha cozida':          { type:'spoon', spoonG:80,   spoonLabel:'concha'    },
   'Grão-de-bico cozido':      { type:'spoon', spoonG:80,   spoonLabel:'concha'    },
   'Ervilha cozida':           { type:'spoon', spoonG:80,   spoonLabel:'concha'    },
-  'Azeite de oliva':          { type:'spoon', spoonG:10,   spoonLabel:'col sopa'  },
-  'Óleo de coco':             { type:'spoon', spoonG:10,   spoonLabel:'col sopa'  },
+  'Azeite de oliva':          { type:'oil', spoonG:10, teaspoonG:3.3, dessertspoonG:5, spoonLabel:'col sopa'  },
+  'Óleo de coco':             { type:'oil', spoonG:10, teaspoonG:3.3, dessertspoonG:5, spoonLabel:'col sopa'  },
   'Pasta de amendoim':        { type:'spoon', spoonG:30,   spoonLabel:'col sopa'  },
   'Manteiga de amêndoa':      { type:'spoon', spoonG:30,   spoonLabel:'col sopa'  },
   'Amendoim torrado':         { type:'spoon', spoonG:20,   spoonLabel:'col sopa'  },
@@ -6946,6 +7391,24 @@ const FOOD_UNIT_CONFIG = {
   'Whey protein':             { type:'spoon', spoonG:30,   spoonLabel:'scoop'     },
   'Proteína de ervilha':      { type:'spoon', spoonG:30,   spoonLabel:'scoop'     },
 };
+
+/**
+ * Escolhe a colher mais natural para expressar uma quantidade de óleo/azeite:
+ * até ~4g → colher de chá; até ~8g → colher de sobremesa; acima disso → colher de sopa.
+ * Evita mostrar frações estranhas de colher de sopa (ex: "0.4 col sopa" vira "1 col chá").
+ */
+function formatOilSpoon(grams, cfg) {
+  const teaG = cfg.teaspoonG || 3.3;
+  const dessertG = cfg.dessertspoonG || 5;
+  const soupG = cfg.spoonG || 10;
+  let qty, singular, plural;
+  if (grams < 4.5) { qty = grams / teaG; singular = 'colher de chá'; plural = 'colheres de chá'; }
+  else if (grams < 8.5) { qty = grams / dessertG; singular = 'colher de sobremesa'; plural = 'colheres de sobremesa'; }
+  else { qty = grams / soupG; singular = 'colher de sopa'; plural = 'colheres de sopa'; }
+  const rounded = Math.max(0.5, Math.round(qty * 2) / 2);
+  const numStr = Number.isInteger(rounded) ? `${rounded}` : rounded.toFixed(1);
+  return `${numStr} ${rounded === 1 ? singular : plural}`;
+}
 
 /**
  * Retorna hint de medida caseira para um alimento e gramagem.
@@ -6966,6 +7429,10 @@ function getMeasureHint(foodName, grams) {
     const rounded = Math.round(qty * 2) / 2;
     if (rounded < 0.5) return '';
     return `≈ ${rounded % 1 === 0 ? rounded : rounded.toFixed(1)} ${cfg.spoonLabel}`;
+  }
+  if (cfg.type === 'oil') {
+    if (grams <= 0) return '';
+    return `≈ ${formatOilSpoon(grams, cfg)}`;
   }
   return '';
 }
@@ -7306,7 +7773,7 @@ function renderAddFoodList() {
     return;
   }
 
-  let items = ALL_FOODS_LIST;
+  let items = ALL_FOODS_LIST.filter(f => !foodViolatesRestrictions(f.name, getCurrentRestrictions()));
 
   // Filtrar por categoria
   if (_addFoodModalCat && _addFoodModalCat !== 'all') {
@@ -7450,7 +7917,7 @@ if (isAppInstalled()) hideInstallBtn();
   // Campos do formulário (steps 1 e 3) que precisamos salvar/restaurar
   // para o plano poder ser recalculado depois, se o usuário quiser.
   const FORM_FIELD_IDS = [
-    'age','weight','height','bodyfat','desiredWeight',
+    'age','weight','height','bodyfat','desiredWeight','activityBase',
     'liftDays','liftTime','runDays','runKm','runPace','runLong',
     'liftHour','runHour','raceDate'
   ];
@@ -7600,7 +8067,7 @@ if (isAppInstalled()) hideInstallBtn();
         item.className = 'saved-plan-item';
         item.innerHTML = `
           <div class="saved-plan-info">
-            <div class="saved-plan-name">${d.name || 'Plano sem nome'}</div>
+            <div class="saved-plan-name"></div>
             <div class="saved-plan-date">${dateStr}</div>
           </div>
           <div class="saved-plan-actions">
@@ -7608,6 +8075,7 @@ if (isAppInstalled()) hideInstallBtn();
             <button class="saved-plan-btn del">Excluir</button>
           </div>
         `;
+        item.querySelector('.saved-plan-name').textContent = d.name || 'Plano sem nome';
         item.querySelector('.load').onclick = () => window.loadPlanFromCloud(docSnap.id);
         item.querySelector('.del').onclick = () => window.deletePlanFromCloud(docSnap.id);
         listEl.appendChild(item);
@@ -7632,6 +8100,7 @@ if (isAppInstalled()) hideInstallBtn();
       // Restaura configurações do wizard e campos do formulário
       if (d.state) Object.assign(state, d.state);
       restoreFormFields(d.formFields);
+      if (window.syncFormUIFromState) window.syncFormUIFromState();
 
       // Restaura se era um "plano variado" (dias diferentes na semana) antes de renderizar
       if (window.setVariationState) window.setVariationState(d.variationState);
